@@ -792,6 +792,11 @@
       const HEX_MM = 0.17;    // one texture tile covers 170 mm of surface
       const vtx = new THREE.Vector3();
       const boxes = gltfs.map((g, i) => {
+        /* drop the RunCam acrylic windows: they read as white smudges over
+           the camera lenses */
+        const drop = [];
+        g.scene.traverse((o) => { if (/^Acrylic_Runcam_Cover/.test(o.name)) drop.push(o); });
+        drop.forEach((o) => o.removeFromParent());
         restyle(g.scene);
         g.scene.updateMatrixWorld(true);
         /* the CAD mesh has no UVs: wrap the carbon weave cylindrically */
