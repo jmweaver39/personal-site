@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Section Scan — Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #111111;
+      --dot: rgba(255, 255, 255, 0.08);
+      --fg: #ffffff;
+      --dim: rgba(255, 255, 255, 0.6);
+      --faint: rgba(255, 255, 255, 0.25);
+      --left: clamp(16px, 3.3vw, 80px);
+      --top: clamp(12px, 3.83vw, 92px);
+      --bar-size: clamp(26px, 3vw, 72px);
+      --squeeze: 0.72;
+      --scan-h: min(76svh, 820px);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: calc(var(--top) + var(--bar-size)) var(--left) var(--top);
+    }
+
+    .title {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+      margin: 0;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--bar-size);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+      white-space: nowrap;
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* the scan box: hover (or focus, or tap) runs the cut up the rocket */
+    .scan {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+      padding: 12px 12px 10px;
+      border: 1px solid var(--faint);
+      background: rgba(17, 17, 17, 0.6);
+      cursor: crosshair;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .scan:hover,
+    .scan:focus-visible,
+    .scan.on {
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+
+    .scan header,
+    .scan footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 9.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .scan header b {
+      font-weight: 600;
+      color: var(--fg);
+    }
+
+    .scan canvas {
+      display: block;
+      height: var(--scan-h);
+      width: calc(var(--scan-h) * 420 / 1600);
+      margin: 0 auto;
+    }
+
+    .scan .hint {
+      transition: opacity 0.2s ease;
+    }
+
+    .scan:hover .hint,
+    .scan.on .hint {
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="page" data-glitch>
+    <h1 class="title"><a href="projects.html" data-glitch-link aria-label="Section Scan — back to projects">Section&nbsp;Scan</a></h1>
+
+    <figure class="scan" tabindex="0" role="img" aria-label="Raven L-1420 hidden-line section scan, tail to nose">
+      <header>
+        <b>Raven L-1420</b>
+        <span>X-section · ISO</span>
+      </header>
+      <canvas></canvas>
+      <footer>
+        <span class="sta">STA 0000 mm</span>
+        <span class="hint">Hover to scan</span>
+        <span class="slice">01 / 50</span>
+      </footer>
+    </figure>
+  </main>
+
+  <script>
+    (() => {
+      /* 50 hidden-line frames from tools/scan-capture.html: a level cut
+         climbing the full 2454 mm stack, tail to nose */
+      const N = 50, FPS = 25, LENGTH = 2454;
+      const box = document.querySelector(".scan");
+      const canvas = box.querySelector("canvas");
+      const g = canvas.getContext("2d");
+      const staEl = box.querySelector(".sta");
+      const sliceEl = box.querySelector(".slice");
+
+      const frames = Array.from({ length: N }, (_, i) => {
+        const im = new Image();
+        im.src = `images/scan/scan${i}.webp`;
+        im.decode().then(() => i === shown && draw(), () => {});
+        return im;
+      });
+
+      let shown = 0, target = 0, last = 0;
+
+      function draw() {
+        const w = Math.round(canvas.clientWidth * devicePixelRatio);
+        const h = Math.round(canvas.clientHeight * devicePixelRatio);
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+        }
+        g.clearRect(0, 0, w, h);
+        const im = frames[shown];
+        if (im.complete && im.naturalWidth) g.drawImage(im, 0, 0, w, h);
+        /* the cut runs from 10 mm under the tail to 10 mm over the nose */
+        const sta = Math.min(LENGTH, Math.max(0, -10 + (LENGTH + 20) * shown / (N - 1)));
+        staEl.textContent = `STA ${String(Math.round(sta)).padStart(4, "0")} mm`;
+        sliceEl.textContent = `${String(shown + 1).padStart(2, "0")} / ${N}`;
+      }
+
+      /* step one frame at a time toward the target at FPS: up while you're
+         over the box, back down when you leave */
+      function tick(now) {
+        if (shown !== target && now - last >= 1000 / FPS - 2) {
+          shown += Math.sign(target - shown);
+          last = now;
+          draw();
+        }
+        requestAnimationFrame(tick);
+      }
+
+      const up = () => (target = N - 1);
+      const down = () => (target = 0);
+      box.addEventListener("pointerenter", (e) => e.pointerType !== "touch" && up());
+      box.addEventListener("pointerleave", (e) => e.pointerType !== "touch" && down());
+      box.addEventListener("focus", up);
+      box.addEventListener("blur", down);
+      /* touch has no hover: a tap toggles the scan */
+      box.addEventListener("pointerup", (e) => {
+        if (e.pointerType !== "touch") return;
+        box.classList.toggle("on");
+        box.classList.contains("on") ? up() : down();
+      });
+
+      window.addEventListener("resize", draw);
+      draw();
+      requestAnimationFrame(tick);
+    })();
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>

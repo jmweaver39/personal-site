@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Section scan capture</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      gap: 24px;
+      padding: 16px;
+      background: #111111;
+      color: #ffffff;
+      font: 12px system-ui, sans-serif;
+    }
+
+    canvas {
+      height: 640px;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+    }
+
+    .side {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- renders the frames for rocket-scan.html: a level cut through the full
+       rocket stepping from tail to nose in N frames, hidden line.
+         ?mode=axial  looking straight down on each cut (images/scan/axialN)
+         ?mode=iso    the whole rocket in isometric, a locator (images/scan/scanN)
+       Start tools/save_frames.py, then press Capture (or add &run) -->
+  <canvas></canvas>
+  <div class="side">
+    <input class="t" type="range" min="0" max="49" value="40">
+    <button class="cap" type="button">Capture</button>
+    <div class="log">Loading…</div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+
+    const params = new URLSearchParams(location.search);
+    const AXIAL = params.get("mode") === "axial";
+    const N = 50;                              // frames, tail to nose
+    const [W, H] = AXIAL ? [1000, 1000] : [420, 1600];
+    const NAME = AXIAL ? "axial" : "scan";
+    const SAVE = "http://127.0.0.1:8432/images/scan/";
+    const EDGE_ANGLE = 28;
+    const FRAME_HALF = 0.2;                    // iso scan-plane square, half side (m)
+    const VIEW_HALF = 0.185;                   // axial view, half width (m): clears the fins
+    const SLAB = 0.04;                         // axial: how far below the cut stays visible (m)
+    const log = (s) => (document.querySelector(".log").textContent = s);
+
+    const canvas = document.querySelector("canvas");
+    canvas.style.width = `${(640 * W) / H}px`;
+    const renderer = new THREE.WebGLRenderer({
+      canvas, antialias: true, alpha: true, stencil: true, preserveDrawingBuffer: true,
+    });
+    renderer.setPixelRatio(1);
+    renderer.setSize(W, H, false);
+    renderer.setClearColor(0x000000, 0);
+    renderer.localClippingEnabled = true;
+    const scene = new THREE.Scene();
+
+    /* below keeps what is under the cut; above keeps the rest (the iso
+       ghost); slab trims the axial view to a thin layer under the cut */
+    const below = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+    const above = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const slab = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const solidClip = AXIAL ? [below, slab] : [below];
+
+    const faceMat = new THREE.MeshBasicMaterial({
+      color: 0x141414, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+      clippingPlanes: solidClip,
+    });
+    const edgeMat = new THREE.LineBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: AXIAL ? 0.6 : 0.9, clippingPlanes: solidClip,
+    });
+    const ghostMat = new THREE.LineBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.2, depthWrite: false, clippingPlanes: [above],
+    });
+    /* the ghost's faces only fill depth, so its lines hide behind it like a
+       hidden-line drawing instead of piling up as an x-ray */
+    const ghostDepthMat = new THREE.MeshBasicMaterial({
+      colorWrite: false, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+      clippingPlanes: [above],
+    });
+
+    /* crease edges plus the silhouette for this one fixed view: an edge
+       whose two faces point opposite ways relative to the camera (the
+       crease part follows three's EdgesGeometry) */
+    function featureEdges(mesh, toCamera) {
+      const geo = mesh.geometry;
+      const pos = geo.attributes.position;
+      const index = geo.index;
+      const count = index ? index.count : pos.count;
+      /* facing test in the mesh's own space: n . (M^-1 v) has the sign of
+         the world normal . v */
+      const v = toCamera.clone().applyMatrix3(new THREE.Matrix3().setFromMatrix4(mesh.matrixWorld).invert());
+      const crease = Math.cos(THREE.MathUtils.degToRad(EDGE_ANGLE));
+      const P = 1e4;
+      const tri = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+      const t = new THREE.Triangle();
+      const n = new THREE.Vector3();
+      const ids = [0, 0, 0], keys = ["", "", ""];
+      const open = new Map();
+      const out = [];
+      for (let i = 0; i < count; i += 3) {
+        for (let j = 0; j < 3; j++) {
+          ids[j] = index ? index.getX(i + j) : i + j;
+          tri[j].fromBufferAttribute(pos, ids[j]);
+          keys[j] = `${Math.round(tri[j].x * P)},${Math.round(tri[j].y * P)},${Math.round(tri[j].z * P)}`;
+        }
+        if (keys[0] === keys[1] || keys[1] === keys[2] || keys[2] === keys[0]) continue;
+        t.set(tri[0], tri[1], tri[2]).getNormal(n);
+        const facing = n.dot(v) > 0;
+        for (let j = 0; j < 3; j++) {
+          const k = (j + 1) % 3;
+          const back = `${keys[k]}_${keys[j]}`;
+          const twin = open.get(back);
+          if (twin) {
+            if (n.dot(twin.n) <= crease || facing !== twin.facing) {
+              out.push(tri[j].x, tri[j].y, tri[j].z, tri[k].x, tri[k].y, tri[k].z);
+            }
+            open.set(back, null);
+          } else if (twin === undefined) {
+            open.set(`${keys[j]}_${keys[k]}`, {
+              n: n.clone(), facing,
+              a: tri[j].clone(), b: tri[k].clone(),
+            });
+          }
+        }
+      }
+      for (const e of open.values()) {
+        if (e) out.push(e.a.x, e.a.y, e.a.z, e.b.x, e.b.y, e.b.z);   // open boundaries
+      }
+      return new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(out, 3));
+    }
+
+    /* filled cut faces, as in the CAD viewer: stencil parity, then a hatched
+       cap wherever the eye is inside solid material. The stencil passes
+       only take the cut, never the slab, or solids running below the slab
+       would lose their exit faces and go uncapped */
+    const stencilMat = (side, op) => new THREE.MeshBasicMaterial({
+      side, clippingPlanes: [below],
+      depthWrite: false, depthTest: false, colorWrite: false,
+      stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc,
+      stencilFail: op, stencilZFail: op, stencilZPass: op,
+    });
+    const stencilBack = stencilMat(THREE.BackSide, THREE.IncrementWrapStencilOp);
+    const stencilFront = stencilMat(THREE.FrontSide, THREE.DecrementWrapStencilOp);
+    const capMat = new THREE.ShaderMaterial({
+      uniforms: { spacing: { value: AXIAL ? 7 : 6 } },
+      vertexShader: `
+        void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform float spacing;
+        void main() {
+          float d = mod(gl_FragCoord.x + gl_FragCoord.y, spacing) - 0.5 * spacing;
+          float a = 1.0 - smoothstep(0.5, 1.4, abs(d));
+          gl_FragColor = vec4(mix(vec3(0.17), vec3(0.9), a), 1.0);
+        }`,
+      side: THREE.DoubleSide,
+      stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc,
+      stencilFail: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp,
+      stencilZPass: THREE.ReplaceStencilOp,
+    });
+    const cap = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), capMat);
+    cap.rotation.x = -Math.PI / 2;
+    cap.scale.set(FRAME_HALF * 2, FRAME_HALF * 2, 1);
+    cap.renderOrder = 1.1;
+    cap.onAfterRender = (r) => r.clearStencil();
+    scene.add(cap);
+
+    const lineMat = (opacity) => new THREE.LineBasicMaterial({
+      color: 0xffffff, transparent: true, opacity, depthTest: false,
+    });
+    /* iso: the scan plane as a square frame around the cut;
+       axial: faint centre lines across the view */
+    const marks = AXIAL
+      ? new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-VIEW_HALF, 0, 0), new THREE.Vector3(VIEW_HALF, 0, 0),
+        new THREE.Vector3(0, 0, -VIEW_HALF), new THREE.Vector3(0, 0, VIEW_HALF),
+      ]), lineMat(0.12))
+      : new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-FRAME_HALF, 0, -FRAME_HALF), new THREE.Vector3(FRAME_HALF, 0, -FRAME_HALF),
+        new THREE.Vector3(FRAME_HALF, 0, FRAME_HALF), new THREE.Vector3(-FRAME_HALF, 0, FRAME_HALF),
+      ]), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 }));
+    marks.renderOrder = 4;
+    scene.add(marks);
+
+    /* the three sections share the assembled frame (model +z toward the
+       nose); stand the rocket up, z -> y */
+    const rocket = new THREE.Group();
+    rocket.rotation.x = -Math.PI / 2;
+    scene.add(rocket);
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    const parts = await Promise.all([1, 2, 3].map((i) => loader.loadAsync(`../models/rocket_v2_s${i}.glb`)));
+    parts.forEach((g) => rocket.add(g.scene));
+    rocket.updateMatrixWorld(true);
+    let box = new THREE.Box3().setFromObject(rocket);
+    const c = box.getCenter(new THREE.Vector3());
+    rocket.position.set(-c.x, 0, -c.z);       // axis through the origin, real heights kept
+    rocket.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(rocket);
+    const midY = (box.min.y + box.max.y) / 2;
+
+    let camera;
+    if (AXIAL) {
+      /* straight down the axis */
+      camera = new THREE.OrthographicCamera(-VIEW_HALF, VIEW_HALF, VIEW_HALF, -VIEW_HALF, 0.01, 6);
+      camera.position.set(0, box.max.y + 1, 0);
+      camera.up.set(0, 0, -1);
+      camera.lookAt(0, box.max.y, 0);
+    } else {
+      /* true isometric, fitted to the rocket plus the scan frame at both ends */
+      camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 20);
+      camera.position.set(1, 1, 1).normalize().multiplyScalar(6).add(new THREE.Vector3(0, midY, 0));
+      camera.lookAt(0, midY, 0);
+      camera.updateMatrixWorld();
+      let hx = 0, hy = 0;
+      for (const y of [box.min.y, box.max.y]) {
+        for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+          const q = new THREE.Vector3(x * FRAME_HALF, y, z * FRAME_HALF).applyMatrix4(camera.matrixWorldInverse);
+          hx = Math.max(hx, Math.abs(q.x));
+          hy = Math.max(hy, Math.abs(q.y));
+        }
+      }
+      const half = Math.max(hy * 1.04, hx * 1.04 * (H / W));   // keep W:H
+      camera.top = half;
+      camera.bottom = -half;
+      camera.right = half * (W / H);
+      camera.left = -half * (W / H);
+    }
+    camera.updateProjectionMatrix();
+
+    log("Finding edges…");
+    await new Promise((r) => setTimeout(r, 30));
+    const meshes = [];
+    rocket.traverse((o) => o.isMesh && meshes.push(o));
+    const toCamera = AXIAL ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 1, 1).normalize();
+    for (const m of meshes) {
+      m.material = faceMat;
+      m.renderOrder = 2;
+      const eg = featureEdges(m, toCamera);
+      const solid = new THREE.LineSegments(eg, edgeMat);
+      solid.renderOrder = 3;
+      for (const mat of [stencilBack, stencilFront]) {
+        const st = new THREE.Mesh(m.geometry, mat);
+        st.renderOrder = 1;
+        m.add(st);
+      }
+      m.add(solid);
+      if (!AXIAL) {
+        const ghost = new THREE.LineSegments(eg, ghostMat);
+        ghost.renderOrder = 3;
+        const ghostDepth = new THREE.Mesh(m.geometry, ghostDepthMat);
+        ghostDepth.renderOrder = 2;
+        m.add(ghost, ghostDepth);
+      }
+    }
+
+    /* frame i: the cut climbs from 10 mm under the tail to 10 mm over the
+       nose (both modes share this, so the locator matches the slices) */
+    function show(i) {
+      const y = box.min.y - 0.01 + (box.max.y - box.min.y + 0.02) * (i / (N - 1));
+      below.constant = y;
+      above.constant = -y;
+      slab.constant = -(y - SLAB);
+      cap.position.set(0, y, 0);
+      marks.position.set(0, y, 0);
+      renderer.render(scene, camera);
+    }
+
+    const slider = document.querySelector(".t");
+    slider.max = String(N - 1);
+    slider.addEventListener("input", () => show(Number(slider.value)));
+    show(Number(slider.value));
+    log(`Ready · ${AXIAL ? "axial" : "iso"} · ${meshes.length} parts · ${((box.max.y - box.min.y) * 1000).toFixed(0)} mm tall`);
+
+    async function capture() {
+      for (let i = 0; i < N; i++) {
+        show(i);
+        const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", 0.9));
+        const res = await fetch(`${SAVE}${NAME}${i}.webp`, { method: "POST", body: blob });
+        if (!res.ok) throw new Error(`save failed at frame ${i}`);
+        log(`Saved ${i + 1} / ${N}`);
+      }
+      log(`Done · ${N} frames in images/scan/${NAME}*.webp`);
+    }
+    document.querySelector(".cap").addEventListener("click", () => capture().catch((e) => log(String(e))));
+    if (params.has("run")) capture().catch((e) => log(String(e)));
+  </script>
+</body>
+</html>

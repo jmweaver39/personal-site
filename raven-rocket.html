@@ -71,6 +71,14 @@
       image-rendering: pixelated;
     }
 
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+    }
+
     canvas.telem {
       position: absolute;
       left: 0;
@@ -246,6 +254,7 @@
     <div class="stage" data-glitch>
       <div class="clouds" aria-hidden="true"><canvas width="640" height="480"></canvas></div>
       <canvas class="gl" aria-label="Raven L-1420 full rocket, splitting into sections"></canvas>
+      <div class="flash" aria-hidden="true"></div>
       <canvas class="telem" aria-hidden="true"></canvas>
 
       <div class="sections" aria-hidden="true">
@@ -558,27 +567,6 @@
     const secs = [new THREE.Group(), new THREE.Group(), new THREE.Group()];
     secs.forEach((s) => orient.add(s));
 
-    /* packed drogue chute, pulled out on the cord during separation;
-       only rendered from inside the onboard camera view */
-    const chute = (() => {
-      const geo = new THREE.IcosahedronGeometry(0.058, 3);
-      const p = geo.attributes.position;
-      const v3 = new THREE.Vector3();
-      for (let i = 0; i < p.count; i++) {
-        v3.fromBufferAttribute(p, i);
-        const n = 1 + 0.16 * Math.sin(v3.x * 55) * Math.sin(v3.y * 47) + 0.1 * Math.sin(v3.z * 60);
-        p.setXYZ(i, v3.x * n, v3.y * n, v3.z * n * 0.75);
-      }
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-        color: 0xd85a36, roughness: 0.92, metalness: 0.0,
-      }));
-      m.position.set(0, 0, 0.32);
-      m.visible = false;
-      orient.add(m);
-      return m;
-    })();
-
     /* yellow nylon webbing: flat 1x5 strap with a woven chevron braid */
     const braidTex = (() => {
       const S = 64;
@@ -613,28 +601,34 @@
     rope.visible = false;
     rope.frustumCulled = false;
     orient.add(rope);
-    /* ejection-charge puff at the separation joint */
-    const puffTex = (() => {
+    /* ejection charge: a hot core and a point light at the bay mouth that
+       flood the tube and cord for a few frames */
+    const flashEl = document.querySelector(".flash");
+    const flashTex = (() => {
       const S = 128;
       const c = document.createElement("canvas");
       c.width = c.height = S;
       const g = c.getContext("2d");
-      const grad = g.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2);
-      grad.addColorStop(0, "rgba(255,250,240,0.95)");
-      grad.addColorStop(0.25, "rgba(230,225,215,0.7)");
-      grad.addColorStop(0.6, "rgba(180,178,172,0.3)");
-      grad.addColorStop(1, "rgba(160,158,152,0)");
+      const grad = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+      grad.addColorStop(0, "rgba(255,255,255,1)");
+      grad.addColorStop(0.18, "rgba(255,248,232,0.9)");
+      grad.addColorStop(0.45, "rgba(255,232,196,0.35)");
+      grad.addColorStop(1, "rgba(255,224,180,0)");
       g.fillStyle = grad;
       g.fillRect(0, 0, S, S);
       const t2 = new THREE.CanvasTexture(c);
       t2.colorSpace = THREE.SRGBColorSpace;
       return t2;
     })();
-    const puff = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: puffTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false,
+    const flashCore = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: flashTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false,
+      blending: THREE.AdditiveBlending,
     }));
-    puff.visible = false;
-    orient.add(puff);
+    flashCore.visible = false;
+    orient.add(flashCore);
+    const flashLight = new THREE.PointLight(0xfff1dc, 0, 3, 2);
+    orient.add(flashLight);
+
     /* flat strap swept along the cord's path: 12mm wide, 2.4mm thick,
        wide face kept horizontal */
     const ROPE_W = 0.006, ROPE_T = 0.0012;
@@ -985,6 +979,55 @@
     }));
     const clock = new THREE.Clock();
 
+    /* the ejection video plays itself forward: scroll down into it (or
+       anywhere inside it) and it runs on to the end at FEED_FPS (1.5x the
+       30 fps footage), carrying the page along. Scrolling down more just
+       keeps it going. Scrolling up is the disruption: the video stops and
+       follows the page back at whatever speed you scroll. A click or a tap
+       pauses it where it is; scroll down again to resume.
+       Every listener here only watches: native scrolling (trackpad momentum
+       included) is never cancelled, so a fast scroll can run the page ahead
+       of the video; turning back then rejoins the video where it is */
+    const FEED_FPS = 45;
+    let autoPlay = false, autoSync = false, syncBack = false, prevScrollY = window.scrollY;
+    const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight;
+    const framePos = (i) => (SEP0 + (SEP1 - SEP0) * i / (TIP_N - 1)) * scrollMax();
+    /* ahead: how much of dy is still to come (all of it for raw input,
+       none for a scroll event, which has already moved the page) */
+    const steer = (dy, ahead = dy) => {
+      if (!dy) return;
+      if (dy < 0) {
+        if (autoPlay) syncBack = true;
+        autoPlay = false;
+        return;
+      }
+      if (!autoPlay && (window.scrollY + ahead) / scrollMax() >= SEP0) autoPlay = autoSync = true;
+    };
+    window.addEventListener("wheel", (e) => { if (!e.ctrlKey) steer(e.deltaY); }, { passive: true });
+    let touchY = null;
+    window.addEventListener("touchstart", (e) => {
+      autoPlay = false;
+      touchY = e.touches[0].clientY;
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (touchY === null) return;
+      const y = e.touches[0].clientY;
+      steer(touchY - y);
+      touchY = y;
+    }, { passive: true });
+    window.addEventListener("keydown", (e) => {
+      const page = window.innerHeight * 0.85;
+      steer({ ArrowDown: 40, PageDown: page, End: 1e6, " ": e.shiftKey ? -page : page,
+              ArrowUp: -40, PageUp: -page, Home: -1e6 }[e.key] || 0);
+    });
+    window.addEventListener("pointerdown", () => { autoPlay = false; }, { passive: true });
+    /* scrollbar drags and dot clicks steer by the scroll they cause */
+    window.addEventListener("scroll", () => {
+      const dy = window.scrollY - prevScrollY;
+      prevScrollY = window.scrollY;
+      steer(dy, 0);
+    }, { passive: true });
+
     function update() {
       const time = clock.getElapsedTime();
       let target = scrollP();
@@ -1016,17 +1059,40 @@
         lastFc = 0;
       }
       if (!camOn) lastFc = -1;
-      /* the video chases the scroll position one frame at a time at a steady
-         30 fps, so a fast scroll never strobes or eases; the 4 ms allowance
-         keeps 60/120 Hz displays on an even every-2nd/4th-refresh cadence */
+      /* forward the video runs itself at FEED_FPS, on a fixed 1/FEED_FPS
+         schedule (2 ms of slack for refresh jitter) so the average rate is
+         exact on any display; backward it simply follows the page */
       const scrollSep = clamp01((target - SEP0) / (SEP1 - SEP0));
       const qTarget = Math.min(TIP_N - 1, Math.round(scrollSep * (TIP_N - 1)));
       if (!camOn) {
         shownStep = 0;
         lastStepAt = time;
-      } else if (shownStep !== qTarget && time - lastStepAt >= 1 / 30 - 1 / 240) {
-        shownStep += Math.sign(qTarget - shownStep);
-        lastStepAt = time;
+      } else if (autoPlay) {
+        /* start from where the page is, then run to the end, pulling the
+           page along with the video (never backwards) */
+        if (autoSync) shownStep = Math.min(shownStep, qTarget);
+        autoSync = false;
+        if (shownStep < TIP_N - 1 && time - lastStepAt >= 1 / FEED_FPS - 0.002) {
+          shownStep++;
+          lastStepAt = time - lastStepAt < 2 / FEED_FPS ? lastStepAt + 1 / FEED_FPS : time;
+        }
+        if (shownStep >= TIP_N - 1) autoPlay = false;
+        const y = framePos(shownStep);
+        if (y > window.scrollY + 0.5) {
+          window.scrollTo(0, y);
+          prevScrollY = window.scrollY;
+        }
+      } else {
+        if (syncBack) {
+          /* you outran the video, then turned back: rejoin it where it is */
+          const y = framePos(shownStep);
+          if (window.scrollY > y + 0.5) {
+            window.scrollTo(0, y);
+            prevScrollY = window.scrollY;
+          }
+          syncBack = false;
+        }
+        if (qTarget < shownStep) shownStep = qTarget;   // scrolling back: no speed limit
       }
       const qStep = shownStep;
       const sepQ = qStep / (TIP_N - 1);
@@ -1076,29 +1142,32 @@
       secs[2].rotation.x = -pan;
       secs[2].position.set(0, panY(0, -gap * 2), panZ(0, -gap * 2));
 
-      /* drogue rides in the bay, then is pulled out, still a packed ball */
-      chute.visible = camOn;
+      /* the cord's slack bight starts down in the bay and is pulled out
+         to mid-cord as the stage falls away */
       const outT = easeSoft(clamp01(qStep / 36));
       const rideZ = 0.32 - gap;
-      const outZ = (0.64 - gap * 0.6) + 0.02;  // the ball rides mid-cord
-      const ballY = 0.004 * outT, ballZ = rideZ + (outZ - rideZ) * outT;
-      chute.position.set(0.01 * outT, panY(ballY, ballZ), panZ(ballY, ballZ));
+      const outZ = (0.64 - gap * 0.6) + 0.02;
+      const slackY = 0.004 * outT, slackZ = rideZ + (outZ - rideZ) * outT;
+      const bx = 0.01 * outT, by = panY(slackY, slackZ), bz = panZ(slackY, slackZ);
 
-      /* the charge flash blooms and fades over the first few frames */
-      const puffT = camOn && qStep > 0 ? clamp01(1 - qStep / 24) : 0;
-      puff.visible = puffT > 0;
-      if (puff.visible) {
-        const pz = 0.64 - gap * 0.5;
-        puff.position.set(0, panY(0, pz), panZ(0, pz));
-        const ps = 0.15 + (1 - puffT) * 0.6;
-        puff.scale.set(ps, ps, 1);
-        puff.material.opacity = puffT * 0.85;
+      /* the ejection charge: a flash that blows out the sensor for a few
+         frames and dies away fast */
+      const flashT = camOn && qStep > 0 && qStep < 12 ? Math.exp(-(qStep - 1) / 1.6) : 0;
+      const mouthZ = 0.64 - gap;
+      flashCore.visible = flashT > 0.01;
+      if (flashCore.visible) {
+        flashCore.position.set(0, panY(0, mouthZ + 0.01), panZ(0, mouthZ + 0.01));
+        const fs = 0.12 + 0.35 * (1 - flashT);
+        flashCore.scale.set(fs, fs, 1);
+        flashCore.material.opacity = flashT;
       }
+      flashLight.intensity = 6 * flashT * flashT;
+      flashLight.position.set(0, panY(0, mouthZ + 0.02), panZ(0, mouthZ + 0.02));
+      flashEl.style.opacity = (0.8 * flashT).toFixed(3);
 
       /* the shock cord pays out past the lens as the stage falls away */
       rope.visible = camOn && qStep > 0;
       if (rope.visible) {
-        const bx = chute.position.x, by = chute.position.y, bz = chute.position.z;
         /* the departing stage's mouth, carried through the same pan */
         const my = panY(0, 0.64 - gap);
         const mz = panZ(0, 0.64 - gap);
@@ -1174,9 +1243,9 @@
       }
 
       /* the bore is dark; the filmed separation is black-and-white */
-      renderer.toneMappingExposure = 0.75 - 0.56 * povT + 0.22 * sepQ;
+      renderer.toneMappingExposure = 0.75 - 0.56 * povT + 0.22 * sepQ + 2.5 * flashT;
       sepLight.intensity = 2.4 * sepQ;
-      const film = camOn ? "grayscale(1) contrast(1.18)" : "";
+      const film = camOn ? `grayscale(1) contrast(1.18) brightness(${(1 + 1.2 * flashT).toFixed(3)})` : "";
       canvas.style.filter = film;
       cloudsEl.style.filter = film;
       cloudsEl.style.opacity = camOn && !groundOn ? "1" : "0";

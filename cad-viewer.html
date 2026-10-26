@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CAD Viewer — Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #111111;
+      --dot: rgba(255, 255, 255, 0.08);
+      --fg: #ffffff;
+      --dim: rgba(255, 255, 255, 0.6);
+      --faint: rgba(255, 255, 255, 0.25);
+      --left: clamp(16px, 3.3vw, 80px);
+      --top: clamp(12px, 3.83vw, 92px);
+      --bar-size: clamp(26px, 3vw, 72px);
+      --squeeze: 0.72;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      position: relative;
+      height: 100vh;
+      height: 100svh;
+    }
+
+    canvas.gl {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    canvas.gl:active {
+      cursor: grabbing;
+    }
+
+    .title {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+      z-index: 3;
+      margin: 0;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--bar-size);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+      white-space: nowrap;
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* control panel: square, letterspaced, outlined like the page switcher */
+    .panel {
+      position: absolute;
+      top: var(--top);
+      right: var(--left);
+      z-index: 4;
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 10px 14px;
+      align-items: center;
+      padding: 14px;
+      font-size: 9.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--dim);
+      background: rgba(17, 17, 17, 0.78);
+      border: 1px solid var(--faint);
+    }
+
+    .panel .lbl {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .seg {
+      display: flex;
+    }
+
+    .seg button + button {
+      border-left: none;
+    }
+
+    button,
+    select {
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      color: rgba(255, 255, 255, 0.5);
+      background: transparent;
+      border: 1px solid var(--faint);
+      border-radius: 0;
+      padding: 5px 8px;
+      cursor: pointer;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    button:hover,
+    button.on,
+    select:hover {
+      color: var(--fg);
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+
+    button:disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      min-width: 0;
+      flex: 1;
+      padding-right: 22px;
+      color: var(--fg);
+      background-image: linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.7) 50%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.7) 50%, transparent 50%);
+      background-position: calc(100% - 11px) 52%, calc(100% - 7px) 52%;
+      background-size: 4px 4px;
+      background-repeat: no-repeat;
+    }
+
+    select option {
+      background: #111111;
+      color: #ffffff;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      min-width: 120px;
+      height: 14px;
+      margin: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 9px;
+      height: 9px;
+      margin-top: -4px;
+      background: var(--fg);
+      border: none;
+      border-radius: 0;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 9px;
+      height: 9px;
+      background: var(--fg);
+      border: none;
+      border-radius: 0;
+    }
+
+    input[type="range"]:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .cut-val {
+      width: 3.4em;
+      text-align: right;
+      color: var(--fg);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status {
+      min-height: 1em;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .readout {
+      position: absolute;
+      left: var(--left);
+      bottom: clamp(14px, 2.2vh, 28px);
+      z-index: 3;
+      font-size: clamp(9px, 0.75vw, 11px);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
+    }
+
+    .tip {
+      position: absolute;
+      right: var(--left);
+      bottom: clamp(14px, 2.2vh, 28px);
+      z-index: 3;
+      font-size: clamp(9px, 0.75vw, 11px);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+    }
+
+    .load {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: var(--fg);
+      z-index: 6;
+      transition: width 0.2s ease, opacity 0.4s linear;
+    }
+
+    .drop {
+      position: absolute;
+      inset: 12px;
+      z-index: 7;
+      display: none;
+      place-items: center;
+      border: 1px dashed rgba(255, 255, 255, 0.6);
+      background: rgba(17, 17, 17, 0.6);
+      font-size: 11px;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    .page.dragging .drop {
+      display: grid;
+    }
+
+    .file {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .panel {
+        top: auto;
+        left: var(--left);
+        bottom: 44px;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px 10px;
+        padding: 10px;
+      }
+
+      .seg button {
+        padding: 5px 6px;
+      }
+
+      .tip {
+        display: none;
+      }
+
+      .readout {
+        bottom: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page" data-glitch>
+    <div class="load" aria-hidden="true"></div>
+    <canvas class="gl" aria-label="Interactive CAD model viewer"></canvas>
+
+    <h1 class="title"><a href="projects.html" data-glitch-link aria-label="CAD Viewer — back to projects">CAD&nbsp;Viewer</a></h1>
+
+    <aside class="panel" aria-label="Viewer controls">
+      <span class="lbl">Model</span>
+      <div class="row">
+        <select class="model" aria-label="Model"></select>
+        <button class="open" type="button">Open</button>
+      </div>
+
+      <span class="lbl">Display</span>
+      <div class="seg modes" role="group" aria-label="Display mode">
+        <button type="button" data-mode="shaded">Shaded</button>
+        <button type="button" data-mode="edges" class="on">Edges</button>
+        <button type="button" data-mode="hidden">Hidden line</button>
+        <button type="button" data-mode="wire">Wireframe</button>
+      </div>
+
+      <span class="lbl">Section</span>
+      <div class="row">
+        <button class="sec-on on" type="button" aria-pressed="true">On</button>
+        <div class="seg axes" role="group" aria-label="Section axis">
+          <button type="button" data-axis="0">X</button>
+          <button type="button" data-axis="1">Y</button>
+          <button type="button" data-axis="2" class="on">Z</button>
+        </div>
+        <button class="flip" type="button">Flip</button>
+      </div>
+
+      <span class="lbl">Offset</span>
+      <div class="row">
+        <input class="cut" type="range" min="0" max="1000" value="500" aria-label="Section offset">
+        <span class="cut-val">50%</span>
+      </div>
+
+      <span class="lbl">View</span>
+      <div class="row">
+        <button class="fit" type="button">Fit</button>
+        <span class="status" aria-live="polite"></span>
+      </div>
+    </aside>
+
+    <div class="readout" aria-live="polite"></div>
+    <div class="tip">Drag to orbit · right-drag to pan · drop a .glb, .gltf or .stl</div>
+    <div class="drop" aria-hidden="true">Drop to open</div>
+    <input class="file" type="file" multiple accept=".glb,.gltf,.bin,.stl,.png,.jpg,.jpeg,.webp">
+  </main>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { STLLoader } from "three/addons/loaders/STLLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { toCreasedNormals } from "three/addons/utils/BufferGeometryUtils.js";
+
+    /* models on the site; rot lays each one out (rocket parts: model +z,
+       the long axis, becomes world +x) */
+    const MODELS = [
+      { name: "Nose section · v2 payload", url: "models/rocket_v2_s1.glb", rot: [0, Math.PI / 2, 0] },
+      { name: "Payload · v1", url: "models/payload.glb", rot: [0, Math.PI / 2, 0] },
+      { name: "Drogue bay", url: "models/rocket_v2_s2.glb", rot: [0, Math.PI / 2, 0] },
+      { name: "Fin can", url: "models/rocket_v2_s3.glb", rot: [0, Math.PI / 2, 0] },
+      { name: "Boom concept", url: "models/boom.glb", rot: [-Math.PI / 2, 0, -Math.PI / 2] },
+      { name: "915 MHz dipole pattern", url: "models/rfd900x-915mhz-dipole-pattern.stl", rot: [-Math.PI / 2, 0, 0] },
+    ];
+    const EDGE_ANGLE = 28;          // deg between faces before a crease counts as an edge
+
+    const page = document.querySelector(".page");
+    const canvas = document.querySelector("canvas.gl");
+    const loadBar = document.querySelector(".load");
+    const modelSel = document.querySelector(".model");
+    const statusEl = document.querySelector(".status");
+    const readout = document.querySelector(".readout");
+    const cutEl = document.querySelector(".cut");
+    const cutVal = document.querySelector(".cut-val");
+    const fileEl = document.querySelector(".file");
+    const panel = document.querySelector(".panel");
+    const narrow = window.matchMedia("(max-width: 760px)");
+    const status = (s) => (statusEl.textContent = s);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, stencil: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
+    renderer.localClippingEnabled = true;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.001, 100);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    const key = new THREE.DirectionalLight(0xffffff, 0.6);
+    key.position.set(1.5, 2.0, 2.5);
+    scene.add(key);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+
+    /* ---------- section plane ----------
+       local clipping on every model material. The cut faces are filled in
+       with the stencil trick: back faces past the plane count up, front
+       faces count down, and wherever the count is non-zero the eye is
+       looking into solid material, so the hatched cap is drawn there */
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
+    const sec = { on: true, axis: 2, t: 0.5, flip: false };
+    const stencilMat = (side, op) => new THREE.MeshBasicMaterial({
+      side, clippingPlanes: [plane],
+      depthWrite: false, depthTest: false, colorWrite: false,
+      stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc,
+      stencilFail: op, stencilZFail: op, stencilZPass: op,
+    });
+    const stencilBack = stencilMat(THREE.BackSide, THREE.IncrementWrapStencilOp);
+    const stencilFront = stencilMat(THREE.FrontSide, THREE.DecrementWrapStencilOp);
+
+    /* section hatching drawn in screen space, so the 45 deg lines keep the
+       same spacing at any zoom and on any size of part; colours are sRGB
+       written straight out. Light for shaded views, dark for hidden line */
+    const rgb = (hex) => new THREE.Vector3(((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255);
+    const HATCH = {
+      light: { base: rgb(0xcfcac0), line: rgb(0x77726a) },
+      dark: { base: rgb(0x161616), line: rgb(0x8a8a8a) },
+    };
+    const capMat = new THREE.ShaderMaterial({
+      uniforms: {
+        base: { value: HATCH.light.base },
+        line: { value: HATCH.light.line },
+        spacing: { value: 7 },
+      },
+      vertexShader: `
+        void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform vec3 base;
+        uniform vec3 line;
+        uniform float spacing;
+        void main() {
+          float d = mod(gl_FragCoord.x + gl_FragCoord.y, spacing) - 0.5 * spacing;
+          float a = 1.0 - smoothstep(0.55, 1.45, abs(d));
+          gl_FragColor = vec4(mix(base, line, a), 1.0);
+        }`,
+      side: THREE.DoubleSide,
+      stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc,
+      stencilFail: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp,
+      stencilZPass: THREE.ReplaceStencilOp,
+    });
+    const cap = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), capMat);
+    cap.renderOrder = 1.1;
+    cap.onAfterRender = (r) => r.clearStencil();
+    scene.add(cap);
+
+    /* thin outline of the plane around the model's cross-section */
+    const outline = new THREE.LineLoop(
+      new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(new Float32Array(12), 3)),
+      new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 })
+    );
+    outline.renderOrder = 4;
+    scene.add(outline);
+
+    /* ---------- display modes ---------- */
+    let mode = "edges";
+    const edgeMat = new THREE.LineBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.55 });
+    const hiddenMat = new THREE.MeshBasicMaterial({
+      color: 0x141414, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    });
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0x9a9a9a, wireframe: true, transparent: true, opacity: 0.45, depthWrite: false,
+    });
+
+    let model = null;      // { root, meshes, mats, box, edges, wires, stencil }
+    let loadId = 0;
+    const nextFrame = () => new Promise((r) => requestAnimationFrame(r));
+
+    /* a child drawn with the parent mesh's geometry (and instances) */
+    function twin(mesh, material) {
+      const t = mesh.isInstancedMesh
+        ? Object.assign(new THREE.InstancedMesh(mesh.geometry, material, mesh.count), { instanceMatrix: mesh.instanceMatrix })
+        : new THREE.Mesh(mesh.geometry, material);
+      t.raycast = () => {};
+      mesh.add(t);
+      return t;
+    }
+
+    function prepare(root) {
+      const meshes = [], mats = new Set();
+      let tris = 0;
+      root.traverse((o) => {
+        if (!o.isMesh) return;
+        meshes.push(o);
+        o.userData.orig = o.material;
+        o.renderOrder = 2;
+        const g = o.geometry;
+        tris += ((g.index ? g.index.count : g.attributes.position.count) / 3) * (o.isInstancedMesh ? o.count : 1);
+        for (const m of [].concat(o.material)) {
+          if (!m || mats.has(m)) continue;
+          mats.add(m);
+          /* satin, not gloss; pushed back a hair so edge lines sit on top */
+          if ("roughness" in m) m.roughness = Math.max(m.roughness, 0.5);
+          if ("metalness" in m) m.metalness = Math.min(m.metalness, 0.35);
+          m.polygonOffset = true;
+          m.polygonOffsetFactor = 1;
+          m.polygonOffsetUnits = 1;
+        }
+      });
+      return { meshes, mats, tris };
+    }
+
+    /* feature edges: only creases sharper than EDGE_ANGLE, built once per
+       geometry, a few meshes per frame so the page never locks up */
+    async function buildEdges(m) {
+      if (m.edges) return;
+      m.edges = [];
+      const cache = new Map();
+      status("Finding edges…");
+      let t0 = performance.now();
+      for (const mesh of m.meshes) {
+        let eg = cache.get(mesh.geometry);
+        if (!eg) {
+          eg = new THREE.EdgesGeometry(mesh.geometry, EDGE_ANGLE);
+          cache.set(mesh.geometry, eg);
+        }
+        const count = mesh.isInstancedMesh ? mesh.count : 1;
+        for (let i = 0; i < count; i++) {
+          const ls = new THREE.LineSegments(eg, edgeMat);
+          ls.renderOrder = 3;
+          ls.raycast = () => {};
+          if (mesh.isInstancedMesh) {
+            mesh.getMatrixAt(i, ls.matrix);
+            ls.matrixAutoUpdate = false;
+          }
+          mesh.add(ls);
+          m.edges.push(ls);
+        }
+        if (performance.now() - t0 > 30) {
+          await nextFrame();
+          if (model !== m) return;
+          t0 = performance.now();
+        }
+      }
+      status("");
+      applyMode();
+    }
+
+    function applyMode() {
+      if (!model) return;
+      document.querySelectorAll(".modes button").forEach((b) => b.classList.toggle("on", b.dataset.mode === mode));
+      for (const mesh of model.meshes) {
+        mesh.material = mode === "hidden" || mode === "wire" ? hiddenMat : mesh.userData.orig;
+      }
+      const wantEdges = mode === "edges" || mode === "hidden";
+      if (wantEdges && !model.edges) buildEdges(model);
+      for (const e of model.edges || []) e.visible = wantEdges;
+      edgeMat.color.set(mode === "hidden" ? 0xe8e8e8 : 0x111111);
+      edgeMat.opacity = mode === "hidden" ? 0.9 : 0.55;
+      if (mode === "wire" && !model.wires) model.wires = model.meshes.map((mesh) => {
+        const w = twin(mesh, wireMat);
+        w.renderOrder = 3;
+        return w;
+      });
+      for (const w of model.wires || []) w.visible = mode === "wire";
+      const h = mode === "hidden" || mode === "wire" ? HATCH.dark : HATCH.light;
+      capMat.uniforms.base.value = h.base;
+      capMat.uniforms.line.value = h.line;
+      applySection();
+    }
+
+    function applySection() {
+      if (!model) return;
+      const { box } = model;
+      const a = sec.axis;
+      const lo = box.min.getComponent(a), hi = box.max.getComponent(a);
+      const v = lo + (hi - lo) * sec.t;
+      /* keep the side away from the default camera (low side of the axis);
+         flip keeps the other half */
+      const s = sec.flip ? 1 : -1;
+      plane.normal.set(0, 0, 0).setComponent(a, s);
+      plane.constant = -s * v;
+
+      const clip = sec.on ? [plane] : null;
+      for (const m of [...model.mats, hiddenMat, wireMat, edgeMat]) {
+        if ((m.clippingPlanes || null) !== clip) m.clippingPlanes = clip;
+      }
+      if (sec.on && !model.stencil) {
+        model.stencil = model.meshes.flatMap((mesh) => [stencilBack, stencilFront].map((mat) => {
+          const st = twin(mesh, mat);
+          st.renderOrder = 1;
+          return st;
+        }));
+      }
+      for (const st of model.stencil || []) st.visible = sec.on;
+
+      /* cap: a hatched square on the plane, big enough for any cross-section */
+      const size = box.getSize(new THREE.Vector3());
+      const diag = size.length();
+      cap.visible = sec.on;
+      cap.position.set(0, 0, 0).setComponent(a, v);
+      cap.lookAt(cap.position.clone().add(plane.normal));
+      cap.scale.set(diag * 1.5, diag * 1.5, 1);
+
+      /* outline around the cross-section of the model's bounds */
+      outline.visible = sec.on;
+      const [b, c] = [0, 1, 2].filter((k) => k !== a);
+      const pad = 0.04 * diag;
+      const p = outline.geometry.attributes.position;
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      corners.forEach(([u, w], i) => {
+        const pt = new THREE.Vector3();
+        pt.setComponent(a, v);
+        pt.setComponent(b, u < 0 ? box.min.getComponent(b) - pad : box.max.getComponent(b) + pad);
+        pt.setComponent(c, w < 0 ? box.min.getComponent(c) - pad : box.max.getComponent(c) + pad);
+        p.setXYZ(i, pt.x, pt.y, pt.z);
+      });
+      p.needsUpdate = true;
+      outline.geometry.computeBoundingSphere();
+
+      cutVal.textContent = Math.round(sec.t * 100) + "%";
+      document.querySelector(".sec-on").classList.toggle("on", sec.on);
+      document.querySelector(".sec-on").setAttribute("aria-pressed", String(sec.on));
+      document.querySelector(".sec-on").textContent = sec.on ? "On" : "Off";
+      document.querySelectorAll(".axes button").forEach((bt) => {
+        bt.classList.toggle("on", Number(bt.dataset.axis) === a);
+        bt.disabled = !sec.on;
+      });
+      document.querySelector(".flip").disabled = !sec.on;
+      document.querySelector(".flip").classList.toggle("on", sec.flip);
+      cutEl.disabled = !sec.on;
+    }
+
+    /* frame the model's bounding-box corners (tighter than its sphere for
+       long parts), leaving room for the title and panel */
+    let touched = false;
+    function fit() {
+      if (!model) return;
+      const r = model.box.getBoundingSphere(new THREE.Sphere()).radius;
+      const dir = new THREE.Vector3(0.75, 0.5, 1.1).normalize();
+      const { min, max } = model.box;
+      const corners = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => new THREE.Vector3(
+        i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? max.z : min.z));
+      camera.near = r / 400;
+      camera.far = r * 60;
+      camera.updateProjectionMatrix();
+      let d = r / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2);
+      const v = new THREE.Vector3();
+      for (let k = 0; k < 4; k++) {
+        camera.position.copy(dir).multiplyScalar(d);
+        camera.lookAt(0, 0, 0);
+        camera.updateMatrixWorld();
+        let ext = 0;
+        for (const c of corners) {
+          v.copy(c).project(camera);
+          ext = Math.max(ext, Math.abs(v.x) / 0.82, Math.abs(v.y) / 0.7);
+        }
+        d *= ext;
+      }
+      camera.position.copy(dir).multiplyScalar(d);
+      touched = false;
+      controls.target.set(0, 0, 0);
+      controls.minDistance = r * 0.15;
+      controls.maxDistance = r * 10;
+      controls.update();
+    }
+
+    function dispose(m) {
+      if (!m) return;
+      scene.remove(m.root);
+      const keep = new Set([stencilBack, stencilFront, hiddenMat, wireMat, edgeMat]);
+      m.root.traverse((o) => {
+        if (o.geometry) o.geometry.dispose();
+        for (const mat of [].concat(o.material || [])) if (!keep.has(mat)) mat.dispose?.();
+      });
+    }
+
+    /* ---------- loading ---------- */
+    function progress(ev) {
+      if (ev.total) loadBar.style.width = (ev.loaded / ev.total) * 92 + "%";
+    }
+
+    async function loadInto(name, url, ext, rot, manager) {
+      const id = ++loadId;
+      loadBar.style.opacity = "1";
+      loadBar.style.width = "4%";
+      status("Loading…");
+      let root;
+      try {
+        if (ext === "stl") {
+          const geo = await new STLLoader(manager).loadAsync(url, progress);
+          geo.computeBoundingBox();
+          const big = geo.boundingBox.getSize(new THREE.Vector3()).length() > 5;
+          if (big) geo.scale(0.001, 0.001, 0.001);   // STL carries no units: large means mm
+          const smooth = toCreasedNormals(geo, THREE.MathUtils.degToRad(EDGE_ANGLE));
+          root = new THREE.Mesh(smooth, new THREE.MeshStandardMaterial({ color: 0xb9b8b3, roughness: 0.55, metalness: 0.05 }));
+        } else {
+          const loader = new GLTFLoader(manager);
+          loader.setMeshoptDecoder(MeshoptDecoder);
+          root = (await loader.loadAsync(url, progress)).scene;
+        }
+      } catch (err) {
+        if (id === loadId) {
+          status("Couldn't open that file");
+          loadBar.style.opacity = "0";
+        }
+        console.error("model load failed", err);
+        return;
+      }
+      if (id !== loadId) return;
+
+      dispose(model);
+      const pivot = new THREE.Group();
+      pivot.rotation.set(rot[0], rot[1], rot[2]);
+      pivot.add(root);
+      pivot.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(pivot);
+      const center = box.getCenter(new THREE.Vector3());
+      pivot.position.sub(center);
+      box.translate(center.negate());
+      scene.add(pivot);
+
+      const { meshes, mats, tris } = prepare(root);
+      model = { name, root: pivot, meshes, mats, box, edges: null, wires: null, stencil: null };
+      const mm = box.getSize(new THREE.Vector3()).multiplyScalar(1000);
+      const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : String(Math.round(n)));
+      readout.textContent = `${meshes.length} parts · ${fmt(tris)} tris · ${mm.x.toFixed(0)} × ${mm.y.toFixed(0)} × ${mm.z.toFixed(0)} mm`;
+      status("");
+      fit();
+      applyMode();
+      loadBar.style.width = "100%";
+      setTimeout(() => (loadBar.style.opacity = "0"), 300);
+    }
+
+    function loadPreset(i) {
+      const m = MODELS[i];
+      loadInto(m.name, m.url, m.url.split(".").pop().toLowerCase(), m.rot);
+    }
+
+    /* dropped or picked files: the main .glb/.gltf/.stl plus any .bin and
+       textures a .gltf points at, matched by file name */
+    function loadFiles(list) {
+      const files = [...list];
+      const main = files.find((f) => /\.(glb|gltf|stl)$/i.test(f.name));
+      if (!main) {
+        status("Drop a .glb, .gltf or .stl");
+        return;
+      }
+      const urls = new Map(files.map((f) => [f.name, URL.createObjectURL(f)]));
+      const manager = new THREE.LoadingManager();
+      manager.setURLModifier((u) => urls.get(decodeURIComponent(u.split("/").pop())) || u);
+      let opt = modelSel.querySelector("option[value='file']");
+      if (!opt) {
+        opt = document.createElement("option");
+        opt.value = "file";
+        modelSel.appendChild(opt);
+      }
+      opt.textContent = main.name;
+      modelSel.value = "file";
+      /* glTF is already y-up; STL from CAD is usually z-up */
+      const ext = main.name.split(".").pop().toLowerCase();
+      loadInto(main.name, urls.get(main.name), ext, ext === "stl" ? [-Math.PI / 2, 0, 0] : [0, 0, 0], manager);
+    }
+
+    /* ---------- controls ---------- */
+    MODELS.forEach((m, i) => {
+      const o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = m.name;
+      modelSel.appendChild(o);
+    });
+    modelSel.addEventListener("change", () => {
+      if (modelSel.value !== "file") loadPreset(Number(modelSel.value));
+    });
+    document.querySelector(".open").addEventListener("click", () => fileEl.click());
+    fileEl.addEventListener("change", () => {
+      if (fileEl.files.length) loadFiles(fileEl.files);
+      fileEl.value = "";
+    });
+    document.querySelectorAll(".modes button").forEach((b) => b.addEventListener("click", () => {
+      mode = b.dataset.mode;
+      applyMode();
+    }));
+    document.querySelector(".sec-on").addEventListener("click", () => {
+      sec.on = !sec.on;
+      applySection();
+    });
+    document.querySelectorAll(".axes button").forEach((b) => b.addEventListener("click", () => {
+      sec.axis = Number(b.dataset.axis);
+      applySection();
+    }));
+    document.querySelector(".flip").addEventListener("click", () => {
+      sec.flip = !sec.flip;
+      applySection();
+    });
+    cutEl.addEventListener("input", () => {
+      sec.t = cutEl.value / 1000;
+      applySection();
+    });
+    document.querySelector(".fit").addEventListener("click", fit);
+
+    let dragDepth = 0;
+    page.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dragDepth++;
+      page.classList.add("dragging");
+    });
+    page.addEventListener("dragover", (e) => e.preventDefault());
+    page.addEventListener("dragleave", () => {
+      if (--dragDepth <= 0) page.classList.remove("dragging");
+    });
+    page.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dragDepth = 0;
+      page.classList.remove("dragging");
+      if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files);
+    });
+
+    function layout() {
+      const w = page.clientWidth, h = page.clientHeight;
+      renderer.setSize(w, h, false);
+      capMat.uniforms.spacing.value = 7 * renderer.getPixelRatio();
+      camera.aspect = w / h;
+      /* on phones the panel sits along the bottom: centre the model in the
+         space above it */
+      if (narrow.matches) camera.setViewOffset(w, h, 0, panel.offsetHeight / 2 + 12, w, h);
+      else camera.clearViewOffset();
+      camera.updateProjectionMatrix();
+      if (!touched) fit();                 // keep framing until you take over
+    }
+    controls.addEventListener("start", () => (touched = true));
+
+    function tick() {
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", layout);
+    layout();
+    loadPreset(0);
+    tick();
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>
