@@ -41,8 +41,8 @@
 
     .track {
       position: relative;
-      height: 1150vh;
-      height: 1150svh;
+      height: 1402vh;
+      height: 1402svh;
     }
 
     .stage {
@@ -77,6 +77,20 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
+    }
+
+    /* the page's own paper, laid over the whole feed (video, smoke and
+       HUD alike) as the view fills with sky, so the final page fades in
+       as one sheet under the flight summary */
+    .fade {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      opacity: 0;
+      pointer-events: none;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
     }
 
     .flash {
@@ -179,6 +193,124 @@
       color: rgba(17, 17, 17, 0.6);
     }
 
+    /* the flight summary: laid over the stage and brought up with the
+       paper as the feed fades out, so the video ends on it */
+    .flight {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      padding: var(--top) var(--left);
+      overflow: hidden;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .flight.live {
+      pointer-events: auto;
+    }
+
+    .flight h2 {
+      margin: 0;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--bar-size);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+      white-space: nowrap;
+    }
+
+    .flight .lede {
+      margin: 0.9em 0 2.4em;
+      font-size: clamp(10px, 0.8vw, 12px);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(17, 17, 17, 0.55);
+    }
+
+    .boxes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      max-width: 1180px;
+    }
+
+    .box {
+      padding: 16px 18px 18px;
+      border: 1px solid rgba(17, 17, 17, 0.28);
+      will-change: opacity, transform;
+    }
+
+    .box .k {
+      font-size: clamp(10px, 0.8vw, 12px);
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(17, 17, 17, 0.95);
+    }
+
+    .box .v {
+      margin: 18px 0 8px;
+      font-family: "Anton", "Impact", sans-serif;
+      font-size: clamp(34px, 3.6vw, 58px);
+      line-height: 1;
+      letter-spacing: -0.01em;
+      transform: scaleX(var(--squeeze));
+      transform-origin: left center;
+      white-space: nowrap;
+    }
+
+    .box .d {
+      font-size: clamp(12px, 0.95vw, 14px);
+      line-height: 1.45;
+      color: rgba(17, 17, 17, 0.6);
+    }
+
+    /* phones: two columns, tighter, so all six fit the one screen, clear
+       of the section dots down the right edge; short wide screens (a phone
+       on its side) keep three columns with the same tight cards */
+    @media (max-width: 760px) {
+      .boxes {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px), (max-height: 560px) {
+      .flight {
+        padding-right: calc(var(--left) + 22px);
+      }
+
+      .flight .lede {
+        margin-bottom: 1.6em;
+      }
+
+      .boxes {
+        gap: 10px;
+      }
+
+      .box {
+        padding: 12px 12px 13px;
+      }
+
+      .box .k {
+        font-size: 9.5px;
+        letter-spacing: 0.12em;
+      }
+
+      .box .v {
+        margin: 10px 0 6px;
+        font-size: 30px;
+      }
+
+      .box .d {
+        font-size: 11.5px;
+        line-height: 1.4;
+      }
+    }
+
     .dots {
       position: absolute;
       right: clamp(14px, 1.8vw, 30px);
@@ -265,6 +397,44 @@
       <canvas class="smoke" aria-hidden="true"></canvas>
       <div class="flash" aria-hidden="true"></div>
       <canvas class="telem" aria-hidden="true"></canvas>
+      <div class="fade" aria-hidden="true"></div>
+
+      <section class="flight" aria-labelledby="flight-h">
+        <h2 id="flight-h">The Flight</h2>
+        <p class="lede">Simulated in OpenRocket · liftoff to touchdown</p>
+        <div class="boxes">
+          <article class="box">
+            <div class="k">Apogee</div>
+            <div class="v">9,714 ft</div>
+            <div class="d">Peak altitude at T+22.7 s, where the drogue comes out.</div>
+          </article>
+          <article class="box">
+            <div class="k">Top speed</div>
+            <div class="v">770 mph</div>
+            <div class="d">Mach 1.02 at T+2.4 s, just before burnout.</div>
+          </article>
+          <article class="box">
+            <div class="k">Boost</div>
+            <div class="v">28 G</div>
+            <div class="d">Peak acceleration off a 2.6 s burn, 1,697 N at peak thrust.</div>
+          </article>
+          <article class="box">
+            <div class="k">Drogue</div>
+            <div class="v">46 mph</div>
+            <div class="d">Descent rate under the drogue from apogee until the main opens at T+161 s.</div>
+          </article>
+          <article class="box">
+            <div class="k">Touchdown</div>
+            <div class="v">8 mph</div>
+            <div class="d">Landing speed under the main parachute.</div>
+          </article>
+          <article class="box">
+            <div class="k">Flight time</div>
+            <div class="v">202 s</div>
+            <div class="d">Liftoff to touchdown, landing 734 ft from the pad.</div>
+          </article>
+        </div>
+      </section>
 
       <div class="sections" aria-hidden="true">
         <div class="sec" data-i="0">
@@ -283,10 +453,10 @@
 
       <nav class="dots" aria-label="Stages">
         <button data-p="0" aria-label="Assembled"></button>
-        <button data-p="0.24" aria-label="Separated"></button>
-        <button data-p="0.4" aria-label="Payload bay close-up"></button>
-        <button data-p="0.61" aria-label="Interior revealed"></button>
-        <button data-p="1" aria-label="Onboard camera"></button>
+        <button data-p="0.1935" aria-label="Separated"></button>
+        <button data-p="0.3226" aria-label="Payload bay close-up"></button>
+        <button data-p="0.4919" aria-label="Interior revealed"></button>
+        <button data-p="0.6129" aria-label="Onboard camera"></button>
       </nav>
 
       <div class="callouts" aria-hidden="true">
@@ -312,18 +482,22 @@
     import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
     import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
     import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-    import { STLLoader } from "three/addons/loaders/STLLoader.js";
 
     /* The real RAVEN airframe, split into its three sections (nose + payload
        bay / drogue bay / fin can) along the drogue tube's extent. Scroll
        slides the sections apart along the axis. Model axis: +z toward the
        nose; metres. */
     const GAP = 0.42;
-    const HERO_END = 0.05, SPLIT_END = 0.26;
-    const ZOOM0 = 0.29, ZOOM1 = 0.42;      // close in on the nose section
-    const REV0 = 0.45, REV1 = 0.60;        // shells fade, payload spins
-    const POV0 = 0.62, POV1 = 0.72;        // fly into the onboard camera
-    const SEP0 = 0.76, SEP1 = 1.0;         // slow-motion separation, filmed
+    /* scroll phases, as fractions of the track's scroll. The ones before
+       the feed were laid out on 1050svh of scroll; the filmed separation
+       after them now gets 504svh, twice its old share, so they're scaled
+       by PRE to keep their own lengths */
+    const PRE = 1050 / 1302;
+    const HERO_END = 0.05 * PRE, SPLIT_END = 0.26 * PRE;
+    const ZOOM0 = 0.29 * PRE, ZOOM1 = 0.42 * PRE;  // close in on the nose section
+    const REV0 = 0.45 * PRE, REV1 = 0.60 * PRE;    // shells fade, payload spins
+    const POV0 = 0.62 * PRE, POV1 = 0.72 * PRE;    // fly into the onboard camera
+    const SEP0 = 0.76 * PRE, SEP1 = 1.0;           // slow-motion separation, filmed
     const SEP_GAP = 2.0;                  // metres of slow-mo separation
     const BUMP_ROLL = 0.77;                // rolls the camera pod to the top
     const easeSoft = (t) => t * t * t * (t * (t * 6 - 15) + 10);
@@ -567,6 +741,10 @@
 
     /* rocket (tilt) -> asm (recenter) -> orient (+z -> -x, nose left) -> s1..s3 */
     const rocket = new THREE.Group();
+    /* roll about the rocket's own axis first, then turn it toward the
+       camera: the split's 3/4 turn then keeps the axis level instead of
+       dipping one end */
+    rocket.rotation.order = "YXZ";
     const asm = new THREE.Group();
     const orient = new THREE.Group();
     orient.rotation.y = -Math.PI / 2;
@@ -613,6 +791,8 @@
     /* ejection charge: a hot core and a point light at the bay mouth that
        flood the tube and cord for a few frames */
     const flashEl = document.querySelector(".flash");
+    const fadeEl = document.querySelector(".fade");
+    const FADE0 = 208;                     // frame where +10 deg leaves the frame
     const flashTex = (() => {
       const S = 128;
       const c = document.createElement("canvas");
@@ -816,46 +996,6 @@
       { at: new THREE.Vector3(0.013, -0.013, 1.028), dx: 78, dy: -96, align: "start" },
     ];
 
-    /* the dipole's 3D radiation pattern: the same revolved solid as
-       models/rfd900x-915mhz-dipole-pattern.step (mm, axis +Z, feed at origin) */
-    const patMat = new THREE.MeshStandardMaterial({
-      color: 0x2a78d6, roughness: 0.55, metalness: 0.0,
-      transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide,
-    });
-    const patLineMat = new THREE.LineBasicMaterial({ color: 0x1d5fae, transparent: true, opacity: 0 });
-    const pattern = new THREE.Group();
-    pattern.visible = false;
-    pattern.position.copy(DIPOLE);
-    secs[0].add(pattern);
-    new STLLoader().load("models/rfd900x-915mhz-dipole-pattern.stl", (geo) => {
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, patMat);
-      m.scale.setScalar(0.001);
-      m.renderOrder = 5;
-      pattern.add(m);
-      /* meridians and the -3 dB parallels, from the same dipole profile */
-      const rOf = (th) => {
-        const s = Math.sin(th);
-        const db = 20 * Math.log10(Math.abs(Math.cos(Math.PI / 2 * Math.cos(th)) / s));
-        return 0.15 * (Math.max(db, -30) + 30) / 30;
-      };
-      for (let k = 0; k < 8; k++) {
-        const az = (k / 8) * Math.PI * 2, pts = [];
-        for (let d = 3; d <= 177; d += 3) {
-          const th = THREE.MathUtils.degToRad(d), r = rOf(th);
-          pts.push(new THREE.Vector3(r * Math.sin(th) * Math.cos(az), r * Math.sin(th) * Math.sin(az), r * Math.cos(th)));
-        }
-        pattern.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), patLineMat));
-      }
-      for (const deg of [51, 90, 129]) {
-        const th = THREE.MathUtils.degToRad(deg), r = rOf(th), pts = [];
-        for (let k = 0; k <= 64; k++) {
-          const az = (k / 64) * Math.PI * 2;
-          pts.push(new THREE.Vector3(r * Math.sin(th) * Math.cos(az), r * Math.sin(th) * Math.sin(az), r * Math.cos(th)));
-        }
-        pattern.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), patLineMat));
-      }
-    });
     const payBox = new THREE.Box3();
     let payCz = 0, payLen = 0.5;
 
@@ -1026,12 +1166,19 @@
     const clamp01 = (v) => Math.min(1, Math.max(0, v));
     const ease = (t) => t * t * (3 - 2 * t);
 
+    /* scroll progress through the sticky track (the section after it
+       scrolls past 1) */
+    const track = document.querySelector(".track");
+    const trackMax = () => track.offsetHeight - window.innerHeight;
     function scrollP() {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const max = trackMax();
       return max > 0 ? clamp01(window.scrollY / max) : 0;
     }
 
     let baseDist = 6;
+    const flightEl = document.querySelector(".flight");
+    const flightHead = [...flightEl.querySelectorAll("h2, .lede")];
+    const boxEls = [...flightEl.querySelectorAll(".box")];
     function layout() {
       const w = stage.clientWidth, h = stage.clientHeight;
       lastBh = 0;
@@ -1046,81 +1193,71 @@
 
     let smoothP = scrollP();
     let lastBh = 0;
-    let lastFc = -1;
     let lastTick = -1;
-    let shownStep = 0, lastStepAt = 0;
-    const histA = [], histV = [], histR = [];
+    /* the HUD reads the flight at the frame on screen: frame q is
+       T+EJECT_T + q/30 s (the footage is 30 fps). ZEN is the camera's own
+       look direction, straight down (180) panning up to 5 deg, exactly the
+       tilt the backdrop frames were shot at. Sampled once per frame into a
+       table so the readouts and traces are a pure function of the frame */
+    const hudZen = (q) => 180 - 175 * q / (TIP_N - 1);
+    const hudAlt = (q) => { const t = q / 30; return fd ? fdAt(fd.alt, EJECT_T + t) : Math.max(0, 1420 - 46 * t - 2.45 * t * t); };
+    const hudVel = (q) => { const t = q / 30; return fd ? fdAt(fd.vel, EJECT_T + t) : -(46 + 4.9 * t); };
+    let hudData = null;
+    const hudTable = () => {
+      if (!hudData || hudData.fd !== fd) {
+        hudData = { fd, alt: [], vel: [], zen: [] };
+        for (let k = 0; k < TIP_N; k++) {
+          hudData.alt.push(hudAlt(k)); hudData.vel.push(hudVel(k)); hudData.zen.push(hudZen(k));
+        }
+      }
+      return hudData;
+    };
     const telem = document.querySelector("canvas.telem");
     const tg = telem.getContext("2d");
     const v = new THREE.Vector3();
     const dotEls = [...document.querySelectorAll(".dots button")];
     dotEls.forEach((b) => b.addEventListener("click", () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      window.scrollTo({ top: parseFloat(b.dataset.p) * max, behavior: "smooth" });
+      window.scrollTo({ top: parseFloat(b.dataset.p) * trackMax(), behavior: "smooth" });
     }));
-    const clock = new THREE.Clock();
 
-    /* the ejection video plays itself forward: scroll down into it (or
-       anywhere inside it) and it runs on to the end at FEED_FPS (1.5x the
-       30 fps footage), carrying the page along. Scrolling down more just
-       keeps it going. Scrolling up is the disruption: the video stops and
-       follows the page back at whatever speed you scroll. A click or a tap
-       pauses it where it is; scroll down again to resume.
-       Every listener here only watches: native scrolling (trackpad momentum
-       included) is never cancelled, so a fast scroll can run the page ahead
-       of the video; turning back then rejoins the video where it is */
-    const FEED_FPS = 45;
-    let autoPlay = false, autoSync = false, syncBack = false, prevScrollY = window.scrollY;
-    const scrollMax = () => document.documentElement.scrollHeight - window.innerHeight;
-    const framePos = (i) => (SEP0 + (SEP1 - SEP0) * i / (TIP_N - 1)) * scrollMax();
-    /* ahead: how much of dy is still to come (all of it for raw input,
-       none for a scroll event, which has already moved the page) */
-    const steer = (dy, ahead = dy) => {
-      if (!dy) return;
-      if (dy < 0) {
-        if (autoPlay) syncBack = true;
-        autoPlay = false;
-        return;
+    /* the ejection video is scroll-driven: the frame on screen is always
+       the one for the page's position, so it never runs ahead of or behind
+       the scroll, and the fade into the flight summary lines up with it.
+       The scroll isn't shared out evenly: each frame's slice of it is its
+       weight, 1 through the plain stretches and up to 2 through the big
+       moments (the ejection flash and kick, the horizon rolling through
+       the frame, the flight summary landing), so even the fastest flick
+       slows down for them. FEED_POS[q] is frame q's place in the feed, 0..1.
+       It only moves when the page does: there's no autoplay, and native
+       scrolling (trackpad momentum included) is never cancelled */
+    const feedWeight = (q) => 1
+      + 1.0 * (q <= 10 ? 1 : Math.exp(-0.5 * ((q - 10) / 14) ** 2))   // ejection
+      + 0.9 * Math.exp(-0.5 * ((q - 160) / 22) ** 2)                  // horizon
+      + 0.6 * ease(clamp01((q - 236) / 60));                            // flight summary
+    const FEED_POS = [0];
+    for (let q = 1; q < TIP_N; q++) FEED_POS.push(FEED_POS[q - 1] + feedWeight(q));
+    for (let q = 1; q < TIP_N; q++) FEED_POS[q] /= FEED_POS[TIP_N - 1];
+    /* the frame for a place u in the feed: the one whose position is nearest */
+    const feedFrame = (u) => {
+      let lo = 0, hi = TIP_N - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (FEED_POS[mid] <= u) lo = mid; else hi = mid;
       }
-      if (!autoPlay && (window.scrollY + ahead) / scrollMax() >= SEP0) autoPlay = autoSync = true;
+      return u - FEED_POS[lo] < FEED_POS[hi] - u ? lo : hi;
     };
-    window.addEventListener("wheel", (e) => { if (!e.ctrlKey) steer(e.deltaY); }, { passive: true });
-    let touchY = null;
-    window.addEventListener("touchstart", (e) => {
-      autoPlay = false;
-      touchY = e.touches[0].clientY;
-    }, { passive: true });
-    window.addEventListener("touchmove", (e) => {
-      if (touchY === null) return;
-      const y = e.touches[0].clientY;
-      steer(touchY - y);
-      touchY = y;
-    }, { passive: true });
-    window.addEventListener("keydown", (e) => {
-      const page = window.innerHeight * 0.85;
-      steer({ ArrowDown: 40, PageDown: page, End: 1e6, " ": e.shiftKey ? -page : page,
-              ArrowUp: -40, PageUp: -page, Home: -1e6 }[e.key] || 0);
-    });
-    window.addEventListener("pointerdown", () => { autoPlay = false; }, { passive: true });
-    /* scrollbar drags and dot clicks steer by the scroll they cause */
-    window.addEventListener("scroll", () => {
-      const dy = window.scrollY - prevScrollY;
-      prevScrollY = window.scrollY;
-      steer(dy, 0);
-    }, { passive: true });
-
     function update() {
-      const time = clock.getElapsedTime();
       let target = scrollP();
       /* inside the feed the scroll magnetises to the nearest frame step */
       if (target > SEP0 && target < SEP1) {
         const u = (target - SEP0) / (SEP1 - SEP0);
-        target = SEP0 + (Math.round(u * (TIP_N - 1)) / (TIP_N - 1)) * (SEP1 - SEP0);
+        target = SEP0 + FEED_POS[feedFrame(u)] * (SEP1 - SEP0);
       }
       smoothP += (target - smoothP) * SMOOTH;
       if (Math.abs(target - smoothP) < 0.0004) smoothP = target;
 
-      const act = smoothP < 0.15 ? 0 : smoothP < 0.34 ? 1 : smoothP < 0.5 ? 2 : smoothP < 0.68 ? 3 : 4;
+      const pa = smoothP / PRE;
+      const act = pa < 0.15 ? 0 : pa < 0.34 ? 1 : pa < 0.5 ? 2 : pa < 0.68 ? 3 : 4;
       dotEls.forEach((b, i) => b.classList.toggle("on", i === act));
 
       if (!ready) {
@@ -1132,53 +1269,12 @@
       const zoomT = easeSoft(clamp01((smoothP - ZOOM0) / (ZOOM1 - ZOOM0)));
       const revT = easeSoft(clamp01((smoothP - REV0) / (REV1 - REV0)));
       const povT = easeSoft(clamp01((smoothP - POV0) / (POV1 - POV0)));
-      /* linear: equal scroll = equal frames, so the pan rate stays constant */
-      const sepT = clamp01((smoothP - SEP0) / (SEP1 - SEP0));
       const camOn = povT > 0.985;           // fully inside the onboard camera
-      if (camOn && lastFc < 0) {
-        histA.length = histV.length = histR.length = 0;
-        lastFc = 0;
-      }
-      if (!camOn) lastFc = -1;
-      /* forward the video runs itself at FEED_FPS, on a fixed 1/FEED_FPS
-         schedule (2 ms of slack for refresh jitter) so the average rate is
-         exact on any display; backward it simply follows the page */
+      /* the frame is the page's position in the feed, nothing else */
       const scrollSep = clamp01((target - SEP0) / (SEP1 - SEP0));
-      const qTarget = Math.min(TIP_N - 1, Math.round(scrollSep * (TIP_N - 1)));
-      if (!camOn) {
-        shownStep = 0;
-        lastStepAt = time;
-      } else if (autoPlay) {
-        /* start from where the page is, then run to the end, pulling the
-           page along with the video (never backwards) */
-        if (autoSync) shownStep = Math.min(shownStep, qTarget);
-        autoSync = false;
-        if (shownStep < TIP_N - 1 && time - lastStepAt >= 1 / FEED_FPS - 0.002) {
-          shownStep++;
-          lastStepAt = time - lastStepAt < 2 / FEED_FPS ? lastStepAt + 1 / FEED_FPS : time;
-        }
-        if (shownStep >= TIP_N - 1) autoPlay = false;
-        const y = framePos(shownStep);
-        if (y > window.scrollY + 0.5) {
-          window.scrollTo(0, y);
-          prevScrollY = window.scrollY;
-        }
-      } else {
-        if (syncBack) {
-          /* you outran the video, then turned back: rejoin it where it is */
-          const y = framePos(shownStep);
-          if (window.scrollY > y + 0.5) {
-            window.scrollTo(0, y);
-            prevScrollY = window.scrollY;
-          }
-          syncBack = false;
-        }
-        if (qTarget < shownStep) shownStep = qTarget;   // scrolling back: no speed limit
-      }
-      const qStep = shownStep;
+      const qStep = camOn ? feedFrame(scrollSep) : 0;
       const sepQ = qStep / (TIP_N - 1);
-      /* the HUD clock rides the raw scroll, racing ahead during fast seeks */
-      const fc = camOn ? sepT * (TIP_N - 1) / 30 : 0;   // frames are 1/30 s apart
+      const fc = qStep / 30;                // the HUD clock: the frame on screen, 1/30 s apart
       const renderNow = !camOn || qStep !== lastTick;
       const groundOn = false;   // Earth-captured tilt frames carry the view
 
@@ -1196,15 +1292,6 @@
          gently during the filmed separation */
       secs[0].rotation.z = BUMP_ROLL * zoomT + Math.PI * 3.5 * revT;
 
-      /* once the nose has rolled a further 180 deg, the dipole's radiation
-         pattern blooms around the antenna; it clears again before the
-         payload settles into its framed view */
-      const rolled = easeSoft(clamp01((revT - 1 / 3.5) / 0.12));
-      const patT = rolled * (1 - easeSoft(clamp01((revT - 0.7) / 0.12)));
-      pattern.visible = patT > 0.01;
-      patMat.opacity = 0.22 * patT;
-      patLineMat.opacity = 0.6 * patT;
-      pattern.scale.setScalar(0.85 + 0.15 * rolled);
       secs[1].rotation.z = 1.1 * sepQ;
       secs[2].rotation.z = 1.9 * sepQ;
       /* the backdrop frames pan the camera up 0..80 deg; the separated stack
@@ -1356,17 +1443,31 @@
       }
 
       /* lattice-style telemetry strip, time-driven, camera view only */
+      /* once the pan has carried even +10 deg of sky above the horizon out
+         of the bottom of the frame (frame FADE0: the 25.7 deg tall view is
+         then centred 23 deg up), the feed fades into the page so the
+         section below follows on seamlessly. It runs off the frame on
+         screen, not the scroll, so a fast scroll can't fade it early: the
+         pan always gets there first, and only the last frame is fully
+         faded */
+      const fadeT = clamp01((qStep - FADE0) / (TIP_N - 1 - FADE0));
+      fadeEl.style.opacity = camOn ? fadeT.toFixed(3) : "0";
       telem.style.opacity = camOn ? "1" : "0";
+      /* the flight summary comes up with the paper: the heading through the
+         middle of the fade, then each card, left to right and row by row,
+         rising in a little; the last is fully in on the last frame */
+      const fl = camOn ? fadeT : 0;
+      flightEl.style.visibility = fl > 0 ? "visible" : "hidden";
+      flightEl.classList.toggle("live", fl > 0.98);
+      for (const el of flightHead) el.style.opacity = clamp01((fl - 0.3) / 0.3).toFixed(3);
+      boxEls.forEach((el, k) => {
+        const o = clamp01((fl - 0.4 - 0.35 * k / (boxEls.length - 1)) / 0.25);
+        el.style.opacity = o.toFixed(3);
+        el.style.transform = `translateY(${((1 - o) * 22).toFixed(1)}px)`;
+      });
       if (camOn) {
-        const mT = EJECT_T + fc;
-        const alt = fd ? fdAt(fd.alt, mT) : Math.max(0, 1420 - 46 * fc - 2.45 * fc * fc);
-        const vel = fd ? fdAt(fd.vel, mT) : -(46 + 4.9 * fc);
-        const rr = fd ? fdAt(fd.zen, mT) : 38 + 95 * sepT;
-        if (fc > lastFc + 0.02 || histA.length === 0) {
-          lastFc = fc;
-          histA.push(alt); histV.push(vel); histR.push(rr);
-          if (histA.length > 180) { histA.shift(); histV.shift(); histR.shift(); }
-        }
+        const hd = hudTable();
+        const alt = hd.alt[qStep], vel = hd.vel[qStep], rr = hd.zen[qStep];
 
         const W = telem.width / 2, H = 150;
         tg.setTransform(2, 0, 0, 2, 0, 0);
@@ -1384,23 +1485,23 @@
           tg.fillStyle = dim ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.88)";
           tg.fillText(s, x, y);
         };
-        const graph = (x, y, w2, h2, data, name, val) => {
+        const graph = (x, y, w2, h2, series, name, val) => {
           panel(x, y, w2, h2);
           label(name, x + 6, y + 13, true);
           label(val, x + w2 - 6 - tg.measureText(val).width, y + 13, false);
-          if (data.length > 1) {
-            let mn = Infinity, mx = -Infinity;
-            for (const d of data) { if (d < mn) mn = d; if (d > mx) mx = d; }
-            const rg = mx - mn || 1;
-            tg.strokeStyle = "rgba(255,255,255,0.85)";
-            tg.beginPath();
-            for (let k = 0; k < data.length; k++) {
-              const gx = x + 6 + (k / 179) * (w2 - 12);
-              const gy = y + h2 - 6 - ((data[k] - mn) / rg) * (h2 - 26);
-              k ? tg.lineTo(gx, gy) : tg.moveTo(gx, gy);
-            }
-            tg.stroke();
+          /* the trace runs from the first frame to this one, on a fixed
+             scale over the whole clip so it never rescales as it grows */
+          let mn = Infinity, mx = -Infinity;
+          for (const d of series) { if (d < mn) mn = d; if (d > mx) mx = d; }
+          const rg = mx - mn || 1;
+          tg.strokeStyle = "rgba(255,255,255,0.85)";
+          tg.beginPath();
+          for (let k = 0; k <= qStep; k++) {
+            const gx = x + 6 + (k / (TIP_N - 1)) * (w2 - 12);
+            const gy = y + h2 - 6 - ((series[k] - mn) / rg) * (h2 - 26);
+            k ? tg.lineTo(gx, gy) : tg.moveTo(gx, gy);
           }
+          tg.stroke();
         };
 
         const m = 10, ph = 70, py = H - ph - 10;
@@ -1411,9 +1512,9 @@
         const sep = qStep > 0;
         tg.fillStyle = sep ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)";   // monochrome feed
         tg.fillText("SEP: " + (sep ? "CONFIRMED" : "ARMED"), m + 7, py + 59);
-        graph(m + 154, py, 92, ph, histA, "ALT FT", alt.toFixed(0));
-        graph(m + 252, py, 92, ph, histV, "VEL MPH", vel.toFixed(1));
-        graph(m + 350, py, 92, ph, histR, "ZEN °", rr.toFixed(1));
+        graph(m + 154, py, 92, ph, hd.alt, "ALT FT", alt.toFixed(0));
+        graph(m + 252, py, 92, ph, hd.vel, "VEL MPH", vel.toFixed(1));
+        graph(m + 350, py, 92, ph, hd.zen, "ZEN °", rr.toFixed(1));
       }
 
       const coT = easeSoft(clamp01((revT - 0.82) / 0.18)) * (1 - easeSoft(clamp01(povT / 0.15)));
