@@ -41,8 +41,8 @@
 
     .track {
       position: relative;
-      height: 1402vh;
-      height: 1402svh;
+      height: 1432vh;
+      height: 1432svh;
     }
 
     .stage {
@@ -79,6 +79,29 @@
       pointer-events: none;
     }
 
+    /* the feed's small print, in the HUD's type; under the paper, so it
+       goes with the video */
+    .credit {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 3;
+      margin: 0;
+      opacity: 0;
+      pointer-events: none;
+      font: 600 9px "SF Mono", Menlo, monospace;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* narrow screens: the HUD panels run the full width, so sit above them */
+    @media (max-width: 720px) {
+      .credit {
+        bottom: 88px;
+      }
+    }
+
     /* the page's own paper, laid over the whole feed (video, smoke and
        HUD alike) as the view fills with sky, so the final page fades in
        as one sheet under the flight summary */
@@ -91,6 +114,14 @@
       background-color: var(--bg);
       background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
       background-size: 16px 16px;
+    }
+
+    .dark {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .flash {
@@ -395,8 +426,10 @@
       <div class="clouds" aria-hidden="true"><canvas width="640" height="480"></canvas></div>
       <canvas class="gl" aria-label="Raven L-1420 full rocket, splitting into sections"></canvas>
       <canvas class="smoke" aria-hidden="true"></canvas>
+      <div class="dark" aria-hidden="true"></div>
       <div class="flash" aria-hidden="true"></div>
       <canvas class="telem" aria-hidden="true"></canvas>
+      <p class="credit">Simulation · Imagery © Google Earth</p>
       <div class="fade" aria-hidden="true"></div>
 
       <section class="flight" aria-labelledby="flight-h">
@@ -453,10 +486,10 @@
 
       <nav class="dots" aria-label="Stages">
         <button data-p="0" aria-label="Assembled"></button>
-        <button data-p="0.1935" aria-label="Separated"></button>
-        <button data-p="0.3226" aria-label="Payload bay close-up"></button>
-        <button data-p="0.4919" aria-label="Interior revealed"></button>
-        <button data-p="0.6129" aria-label="Onboard camera"></button>
+        <button data-p="0.1892" aria-label="Separated"></button>
+        <button data-p="0.3153" aria-label="Payload bay close-up"></button>
+        <button data-p="0.4809" aria-label="Interior revealed"></button>
+        <button data-p="0.6216" aria-label="Onboard camera"></button>
       </nav>
 
       <div class="callouts" aria-hidden="true">
@@ -488,16 +521,21 @@
        slides the sections apart along the axis. Model axis: +z toward the
        nose; metres. */
     const GAP = 0.42;
-    /* scroll phases, as fractions of the track's scroll. The ones before
-       the feed were laid out on 1050svh of scroll; the filmed separation
-       after them now gets 504svh, twice its old share, so they're scaled
-       by PRE to keep their own lengths */
-    const PRE = 1050 / 1302;
+    /* scroll phases, as fractions of the track's 1332svh of scroll. The
+       ones up to the dive were laid out on 1050svh and are scaled by PRE
+       to keep their own lengths; the dark in the tube then gets 30svh more
+       than it had there, and the filmed separation 504svh */
+    const PRE = 1050 / 1332;
     const HERO_END = 0.05 * PRE, SPLIT_END = 0.26 * PRE;
     const ZOOM0 = 0.29 * PRE, ZOOM1 = 0.42 * PRE;  // close in on the nose section
     const REV0 = 0.45 * PRE, REV1 = 0.60 * PRE;    // shells fade, payload spins
-    const POV0 = 0.62 * PRE, POV1 = 0.72 * PRE;    // fly into the onboard camera
-    const SEP0 = 0.76 * PRE, SEP1 = 1.0;           // slow-motion separation, filmed
+    const POV0 = 0.62 * PRE, POV1 = 0.72 * PRE;    // fly down to the onboard camera
+    const DIVE1 = 0.735 * PRE;                     // on into the lower tube: black
+    const SEP0 = (0.76 * 1050 + 30) / 1332, SEP1 = 1.0;   // slow-motion separation, filmed
+    /* with the stack split, the lower tube's mouth (its forward end at
+       z 0.813) sits GAP - 0.158 m aft of the lens (z 0.655); the dive ends
+       6 cm inside it */
+    const DIVE = GAP - (0.813 - 0.655) + 0.06;
     const SEP_GAP = 2.0;                  // metres of slow-mo separation
     const BUMP_ROLL = 0.77;                // rolls the camera pod to the top
     const easeSoft = (t) => t * t * t * (t * (t * 6 - 15) + 10);
@@ -791,7 +829,9 @@
     /* ejection charge: a hot core and a point light at the bay mouth that
        flood the tube and cord for a few frames */
     const flashEl = document.querySelector(".flash");
+    const darkEl = document.querySelector(".dark");
     const fadeEl = document.querySelector(".fade");
+    const creditEl = document.querySelector(".credit");
     const FADE0 = 208;                     // frame where +10 deg leaves the frame
     const flashTex = (() => {
       const S = 128;
@@ -947,7 +987,14 @@
             m.roughness = rough;
             m.metalness = metal;
           };
-          if (r > 0.94 && g > 0.94 && b > 0.94 && spread < 0.05) {
+          if (Math.abs(r - 0.769) < 0.01 && Math.abs(g - 0.886) < 0.01 && Math.abs(b - 0.953) < 0.01) {
+            /* the GPS board: the CAD's light blue (#c4e2f3) washes out to
+               white under the page's light, so it's deepened to read as
+               light blue in the render */
+            m.color.setRGB(0.42, 0.72, 0.93, THREE.SRGBColorSpace);
+            m.roughness = 0.55;
+            m.metalness = 0;
+          } else if (r > 0.94 && g > 0.94 && b > 0.94 && spread < 0.05) {
             /* white lens covers: clear acrylic like the camera plate */
             o.material = Array.isArray(o.material)
               ? o.material.map((mm) => (mm === m ? acrylicMat : mm))
@@ -985,7 +1032,7 @@
     }
 
     let C0 = new THREE.Vector3(), L0 = 2.5, len1 = 0.7, cz = [0, 0, 0], tubeR = 0.08, ready = false;
-    const shellMeshes = [], shellMats = [];
+    const shellMeshes = [], shellMats = [], mountMats = [];
 
     /* upper payload: the 915 MHz dipole, the LoRa quarter-wave and the M9N
        (model-space centres from the CAD) */
@@ -1141,6 +1188,15 @@
         shellMats.push(cl);
       });
 
+      /* the plate the GPS board sits in (its own material in the model)
+         goes see-through with the shells, so the board shows inside it */
+      gltfs[0].scene.traverse((o) => {
+        if (!o.isMesh || !(o.material.name || "").includes("_gps_mount")) return;
+        o.material = o.material.clone();
+        o.material.transparent = true;
+        mountMats.push(o.material);
+      });
+
       /* the payload alone: everything in section 1 that stays after the fade */
       const s1 = gltfs[0].scene, s1Parent = s1.parent;
       s1Parent.remove(s1);
@@ -1246,6 +1302,7 @@
       }
       return u - FEED_POS[lo] < FEED_POS[hi] - u ? lo : hi;
     };
+
     function update() {
       let target = scrollP();
       /* inside the feed the scroll magnetises to the nearest frame step */
@@ -1269,7 +1326,8 @@
       const zoomT = easeSoft(clamp01((smoothP - ZOOM0) / (ZOOM1 - ZOOM0)));
       const revT = easeSoft(clamp01((smoothP - REV0) / (REV1 - REV0)));
       const povT = easeSoft(clamp01((smoothP - POV0) / (POV1 - POV0)));
-      const camOn = povT > 0.985;           // fully inside the onboard camera
+      const diveT = easeSoft(clamp01((smoothP - POV1) / (DIVE1 - POV1)));
+      const camOn = diveT > 0.985;          // dark in the tube: the onboard camera takes over
       /* the frame is the page's position in the feed, nothing else */
       const scrollSep = clamp01((target - SEP0) / (SEP1 - SEP0));
       const qStep = camOn ? feedFrame(scrollSep) : 0;
@@ -1278,8 +1336,11 @@
       const renderNow = !camOn || qStep !== lastTick;
       const groundOn = false;   // Earth-captured tilt frames carry the view
 
-      /* split, reassemble into the POV, then slow-motion re-separation */
-      const mainGap = GAP * t * (1 - povT);
+      /* split, then held apart: the lower body stays put while the camera
+         flies down to the bottom of the payload and on into its tube. Once
+         the view is black the stack is closed up unseen, so the filmed
+         separation starts from the assembled rocket */
+      const mainGap = camOn ? 0 : GAP * t;
       const kick = 1 - Math.pow(Math.max(0, 1 - qStep / 126), 2);
       const gap = mainGap + SEP_GAP * kick;
       secs[1].position.z = -gap;
@@ -1380,6 +1441,10 @@
         shellMats[k].opacity = 1 - fade;
         shellMeshes[k].visible = fade < 0.98;
       }
+      for (const m of mountMats) {
+        m.opacity = 1 - 0.75 * fade;
+        m.depthWrite = fade < 0.02;
+      }
 
       /* camera: wide -> nose close-up -> onboard camera POV (locked) */
       const noseX = asm.position.x - cz[0];
@@ -1396,7 +1461,7 @@
       dist += (dPay - dist) * revT;
       const yOff = 0.027 * 2 * dPay * vHalf * revT;
       const camY = 0.045 * zoomT * (1 - revT) + yOff;
-      const povX = asm.position.x - 0.655, povY = 0.012, povZ = 0.015;
+      const povX = asm.position.x - 0.655 + (camOn ? 0 : DIVE * diveT), povY = 0.012, povZ = 0.015;
       camera.position.set(
         tx + (povX - tx) * povT,
         camY + (povY - camY) * povT,
@@ -1426,7 +1491,9 @@
       }
 
       /* the bore is dark; the filmed separation is black-and-white */
-      renderer.toneMappingExposure = 0.75 - 0.56 * povT + 0.22 * sepQ + 2.5 * flashT;
+      renderer.toneMappingExposure = 0.75 - 0.56 * diveT + 0.22 * sepQ + 2.5 * flashT;
+      /* black from the tube's mouth until the charge fires */
+      darkEl.style.opacity = (camOn ? (qStep === 0 ? 1 : 0) : clamp01((diveT - 0.6) / 0.35)).toFixed(3);
       sepLight.intensity = 2.4 * sepQ;
       const film = camOn ? `grayscale(1) contrast(1.18) brightness(${(1 + 1.2 * flashT).toFixed(3)})` : "";
       canvas.style.filter = film;
@@ -1453,6 +1520,7 @@
       const fadeT = clamp01((qStep - FADE0) / (TIP_N - 1 - FADE0));
       fadeEl.style.opacity = camOn ? fadeT.toFixed(3) : "0";
       telem.style.opacity = camOn ? "1" : "0";
+      creditEl.style.opacity = camOn ? "1" : "0";
       /* the flight summary comes up with the paper: the heading through the
          middle of the fade, then each card, left to right and row by row,
          rising in a little; the last is fully in on the last frame */
