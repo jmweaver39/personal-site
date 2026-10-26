@@ -18,7 +18,8 @@
       --top: clamp(12px, 3.83vw, 92px);
       --bar-size: clamp(26px, 3vw, 72px);
       --squeeze: 0.72;
-      --scan-h: min(76svh, 820px);
+      /* slice panel side; the locator beside it is 420:1600 at the same height */
+      --s: min(68svh, 640px, calc((100vw - 2 * var(--left) - 46px) / 1.2625));
     }
 
     *,
@@ -73,12 +74,12 @@
       text-decoration: none;
     }
 
-    /* the scan box: hover (or focus, or tap) runs the cut up the rocket */
+    /* the scan box: hover (or focus, or tap) steps the cut up the rocket */
     .scan {
-      position: relative;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto auto auto;
       gap: 10px;
+      margin: 0;
       padding: 12px 12px 10px;
       border: 1px solid var(--faint);
       background: rgba(17, 17, 17, 0.6);
@@ -111,11 +112,26 @@
       color: var(--fg);
     }
 
-    .scan canvas {
+    .views {
+      display: flex;
+      gap: 10px;
+    }
+
+    .views canvas {
       display: block;
-      height: var(--scan-h);
-      width: calc(var(--scan-h) * 420 / 1600);
-      margin: 0 auto;
+      height: var(--s);
+    }
+
+    /* where on the rocket the cut is, like a scan's scout image */
+    canvas.locator {
+      width: calc(var(--s) * 420 / 1600);
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      padding-right: 10px;
+      box-sizing: content-box;
+    }
+
+    canvas.slice {
+      width: var(--s);
     }
 
     .scan .hint {
@@ -132,57 +148,67 @@
   <main class="page" data-glitch>
     <h1 class="title"><a href="projects.html" data-glitch-link aria-label="Section Scan — back to projects">Section&nbsp;Scan</a></h1>
 
-    <figure class="scan" tabindex="0" role="img" aria-label="Raven L-1420 hidden-line section scan, tail to nose">
+    <figure class="scan" tabindex="0" role="img" aria-label="Raven L-1420 section scan: top-down cuts from tail to nose">
       <header>
         <b>Raven L-1420</b>
-        <span>X-section · ISO</span>
+        <span>Axial section · top down</span>
       </header>
-      <canvas></canvas>
+      <div class="views">
+        <canvas class="locator"></canvas>
+        <canvas class="slice"></canvas>
+      </div>
       <footer>
         <span class="sta">STA 0000 mm</span>
         <span class="hint">Hover to scan</span>
-        <span class="slice">01 / 50</span>
+        <span class="num">01 / 50</span>
       </footer>
     </figure>
   </main>
 
   <script>
     (() => {
-      /* 50 hidden-line frames from tools/scan-capture.html: a level cut
-         climbing the full 2454 mm stack, tail to nose */
-      const N = 50, FPS = 25, LENGTH = 2454;
+      /* 50 cuts through the full 2454 mm stack from tools/scan-capture.html:
+         axialN looks straight down on cut N, scanN shows where it is */
+      const N = 50, FPS = 20, LENGTH = 2454;
       const box = document.querySelector(".scan");
-      const canvas = box.querySelector("canvas");
-      const g = canvas.getContext("2d");
+      const locator = box.querySelector("canvas.locator");
+      const slice = box.querySelector("canvas.slice");
       const staEl = box.querySelector(".sta");
-      const sliceEl = box.querySelector(".slice");
+      const numEl = box.querySelector(".num");
 
-      const frames = Array.from({ length: N }, (_, i) => {
+      const load = (name) => Array.from({ length: N }, (_, i) => {
         const im = new Image();
-        im.src = `images/scan/scan${i}.webp`;
+        im.src = `images/scan/${name}${i}.webp`;
         im.decode().then(() => i === shown && draw(), () => {});
         return im;
       });
+      const slices = load("axial");
+      const scouts = load("scan");
 
       let shown = 0, target = 0, last = 0;
 
-      function draw() {
+      function paint(canvas, im) {
         const w = Math.round(canvas.clientWidth * devicePixelRatio);
         const h = Math.round(canvas.clientHeight * devicePixelRatio);
         if (canvas.width !== w || canvas.height !== h) {
           canvas.width = w;
           canvas.height = h;
         }
+        const g = canvas.getContext("2d");
         g.clearRect(0, 0, w, h);
-        const im = frames[shown];
         if (im.complete && im.naturalWidth) g.drawImage(im, 0, 0, w, h);
+      }
+
+      function draw() {
+        paint(slice, slices[shown]);
+        paint(locator, scouts[shown]);
         /* the cut runs from 10 mm under the tail to 10 mm over the nose */
         const sta = Math.min(LENGTH, Math.max(0, -10 + (LENGTH + 20) * shown / (N - 1)));
         staEl.textContent = `STA ${String(Math.round(sta)).padStart(4, "0")} mm`;
-        sliceEl.textContent = `${String(shown + 1).padStart(2, "0")} / ${N}`;
+        numEl.textContent = `${String(shown + 1).padStart(2, "0")} / ${N}`;
       }
 
-      /* step one frame at a time toward the target at FPS: up while you're
+      /* step one cut at a time toward the target at FPS: up while you're
          over the box, back down when you leave */
       function tick(now) {
         if (shown !== target && now - last >= 1000 / FPS - 2) {
