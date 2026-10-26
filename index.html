@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    /* Sizes are measured from the 2400 x 1795 Figma frame and scale with the viewport. */
+    :root {
+      --bg: #111111;
+      --dot: rgba(255, 255, 255, 0.08);
+      --fg: #ffffff;
+
+      --left: clamp(12px, 1.1vw, 26px);
+      --top: clamp(12px, 1.96vw, 47px);
+      /* Four lines must fit the viewport height as well as match the frame width */
+      --nav-size: clamp(48px, min(15.67vw, (100svh - 2 * var(--top)) / 3.9), 376px);
+      --bar-size: clamp(28px, 3.54vw, 85px);
+      --squeeze: 0.79;  /* Figma letterforms are narrower than Anton's */
+      --icon-size: clamp(20px, 2vw, 48px);
+      --icon-gap: clamp(10px, 0.92vw, 22px);
+      --icon-right: clamp(12px, 1.25vw, 30px);
+      --icon-bottom: clamp(12px, 0.83vw, 20px);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      /* No rubber-band bounce at the ends of the scroll */
+      overscroll-behavior: none;
+    }
+
+    /* Snap to the two resting states (big nav, compact nav) using the browser's
+       own momentum, so a flick carries straight through to the next state. */
+    html {
+      scroll-snap-type: y mandatory;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* The page scrolls through this tall track while the stage stays pinned;
+       scroll position drives the nav animation. */
+    .track {
+      position: relative;
+      height: 300vh;
+      height: 300svh;
+    }
+
+    .snap {
+      position: absolute;
+      left: 0;
+      width: 1px;
+      height: 100vh;
+      height: 100svh;
+      scroll-snap-align: start;
+      pointer-events: none;
+    }
+
+    .snap--start {
+      top: 0;
+    }
+
+    .snap--end {
+      bottom: 0;
+    }
+
+    .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+      overflow: hidden;
+      background-color: var(--bg);
+    }
+
+    /* Self-similar dot grid, drawn on a canvas so it can be zoomed into forever */
+    .fractal {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    /* Everything on top of the background */
+    .layer {
+      position: absolute;
+      inset: 0;
+    }
+
+    .menu,
+    .bar {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .menu {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+    }
+
+    .menu li,
+    .bar li {
+      transform: translate(var(--x, 0px), var(--y, 0px));
+      will-change: transform;
+    }
+
+    .menu a,
+    .bar a {
+      display: block;
+      font-family: "Anton", "Impact", sans-serif;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+      /* Outlined by default; filled white only while hovered */
+      color: transparent;
+      transition: color 0.15s ease;
+      transform: scaleX(var(--squeeze));
+      transform-origin: left center;
+    }
+
+    .menu a {
+      font-size: var(--nav-size);
+      line-height: 0.93;
+      -webkit-text-stroke: max(2px, 0.027em) var(--fg);
+    }
+
+    /* Size each item to its squeezed word so layout and the hover box hug the glyphs */
+    .menu li,
+    .bar li {
+      width: calc(var(--w, 0px) * var(--squeeze));
+    }
+
+    .menu a,
+    .bar a {
+      width: max-content;
+    }
+
+    .bar {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+      display: flex;
+      gap: 0.28em;
+      font-size: var(--bar-size);
+    }
+
+    .bar a {
+      font-size: var(--bar-size);
+      line-height: 1;
+      -webkit-text-stroke: max(1px, 0.018em) var(--fg);
+    }
+
+    .menu a:hover,
+    .menu a:focus-visible,
+    .bar a:hover,
+    .bar a:focus-visible {
+      color: var(--fg);
+      outline: none;
+    }
+
+    .social {
+      position: absolute;
+      right: var(--icon-right);
+      bottom: var(--icon-bottom);
+      display: flex;
+      gap: var(--icon-gap);
+    }
+
+    .social a {
+      display: block;
+      width: var(--icon-size);
+      height: var(--icon-size);
+      color: var(--fg);
+      transition: opacity 0.15s ease;
+    }
+
+    .social a:hover,
+    .social a:focus-visible {
+      opacity: 0.6;
+    }
+
+    .social svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    .social svg[fill="none"] {
+      fill: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="track">
+    <div class="snap snap--start" aria-hidden="true"></div>
+    <div class="snap snap--end" aria-hidden="true"></div>
+    <div class="stage" data-glitch>
+      <canvas class="fractal" aria-hidden="true"></canvas>
+      <div class="layer">
+        <nav aria-label="Main">
+          <ul class="menu">
+            <li><a href="projects.html" data-glitch-link>Projects</a></li>
+            <li><a href="#work">Work</a></li>
+            <li><a href="research.html" data-glitch-link>Research</a></li>
+            <li><a href="#books">Books</a></li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Main (compact)" inert>
+          <ul class="bar">
+            <li><a href="projects.html" data-glitch-link>Projects</a></li>
+            <li><a href="#work">Work</a></li>
+            <li><a href="research.html" data-glitch-link>Research</a></li>
+            <li><a href="#books">Books</a></li>
+          </ul>
+        </nav>
+
+        <nav class="social" aria-label="Social links">
+          <a href="https://www.linkedin.com/in/jay-weaver2/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.56V9h3.56v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z"/></svg>
+          </a>
+          <a href="https://x.com/jmweaver739" target="_blank" rel="noopener noreferrer" aria-label="X">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 1.15h3.68l-8.04 9.19L24 22.85h-7.4l-5.8-7.58-6.64 7.58H.48l8.6-9.83L0 1.15h7.59l5.24 6.93 6.07-6.93Zm-1.29 19.5h2.04L6.48 3.24H4.3l13.31 17.41Z"/></svg>
+          </a>
+          <a href="https://github.com/jmweaver39" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3"/></svg>
+          </a>
+          <a href="mailto:jmweaver39@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="1.5"/><path d="m2.5 5 9.5 8 9.5-8"/></svg>
+          </a>
+        </nav>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const stage = document.querySelector(".stage");
+    const menu = document.querySelector(".menu");
+    const bar = document.querySelector(".bar");
+    const menuItems = [...menu.children];
+    const barItems = [...bar.children];
+
+    // Scroll progress 0 to 1 over the track. The first half slides the big
+    // nav out to the left, bottom line first; the second half drops the
+    // compact nav in from the top, left word first.
+    // The phases overlap slightly so the compact nav starts dropping just as
+    // "Projects" finishes leaving.
+    const OUT = [0, 0.5];
+    const IN = [0.47, 1];
+    const STAGGER = 0.55;  // fraction of each phase spent staggering starts
+
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    // Local 0..1 progress for item `i` of `n` within a phase window
+    function local(p, [start, end], i, n) {
+      const span = end - start;
+      const each = span * (1 - STAGGER);
+      const offset = n > 1 ? (span * STAGGER * i) / (n - 1) : 0;
+      return clamp01((p - start - offset) / each);
+    }
+
+    let distances = [];
+    let drops = [];
+
+    function measure() {
+      for (const li of [...menuItems, ...barItems]) {
+        li.style.setProperty("--w", li.firstElementChild.offsetWidth + "px");
+      }
+      distances = menuItems.map((li) => li.getBoundingClientRect().right + 20);
+      drops = barItems.map(() => bar.getBoundingClientRect().bottom + 20);
+    }
+
+    let ticking = false;
+
+    function update() {
+      ticking = false;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? clamp01(window.scrollY / max) : 0;
+
+      // The stage is pinned, so move the dot grid to make it scroll with the page
+      drawFractal();
+
+      const n = menuItems.length;
+      menuItems.forEach((li, i) => {
+        const t = local(p, OUT, n - 1 - i, n);
+        li.style.setProperty("--x", (-t * distances[i]).toFixed(2) + "px");
+      });
+
+      barItems.forEach((li, i) => {
+        const t = local(p, IN, i, barItems.length);
+        li.style.setProperty("--y", (-(1 - t) * drops[i]).toFixed(2) + "px");
+      });
+
+      // Only the nav that is on screen takes hover and keyboard focus
+      menu.parentElement.inert = p >= OUT[1];
+      bar.parentElement.inert = p <= IN[0];
+    }
+
+    function requestUpdate() {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    }
+
+    function reset() {
+      sizeCanvas();
+      for (const li of [...menuItems, ...barItems]) {
+        li.style.removeProperty("--x");
+        li.style.removeProperty("--y");
+      }
+      measure();
+      update();
+    }
+
+    // Fractal background: nested dot grids, each level a third the spacing of
+    // the one above, with every dot cell holding a 3x3 grid of the next level.
+    // Zooming by 3x lands on an identical picture, so any zoom level looks right.
+    const canvas = stage.querySelector(".fractal");
+    const ctx = canvas.getContext("2d");
+    const CELL = 16;        // resting dot spacing (px)
+    const K = 3;            // spacing ratio between levels
+    const DOT_ALPHA = 0.08; // matches the old CSS dot colour
+    const TILE = 48;        // offscreen tile size; one tile is one grid cell
+
+    const tile = document.createElement("canvas");
+    tile.width = tile.height = TILE;
+    const tctx = tile.getContext("2d");
+    const unit = TILE / CELL;  // tile pixels per CSS pixel at rest
+    const dot = tctx.createRadialGradient(TILE / 2, TILE / 2, 0, TILE / 2, TILE / 2, 1.4 * unit);
+    dot.addColorStop(0, "#fff");
+    dot.addColorStop(1 / 1.4, "#fff");
+    dot.addColorStop(1, "rgba(255, 255, 255, 0)");
+    tctx.fillStyle = dot;
+    tctx.fillRect(0, 0, TILE, TILE);
+    const pattern = ctx.createPattern(tile, "repeat");
+
+    let zoom = 1;
+
+    function sizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(stage.clientWidth * dpr);
+      canvas.height = Math.round(stage.clientHeight * dpr);
+    }
+
+    function drawFractal() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+      const cx = w / 2;
+      const cy = h / 2;
+      const depth = Math.log(zoom) / Math.log(K);
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Level i shows dots spaced CELL * K^(depth - i) apart on screen. Each
+      // level fades in as it grows toward CELL and out as it grows past it, so
+      // the weights always sum to one and the grid looks the same at any depth.
+      for (let i = Math.floor(depth) - 1; i <= Math.ceil(depth) + 1; i++) {
+        const weight = 1 - Math.abs(depth - i);
+        if (weight <= 0.01) continue;
+        // On-screen spacing, and the grid origin zoomed about the center. The
+        // origin is wrapped into one cell so the numbers stay small at any depth.
+        const step = CELL * K ** (depth - i);
+        const ox = cx - cx * zoom;
+        const oy = cy - (cy + window.scrollY) * zoom;
+        pattern.setTransform(
+          new DOMMatrix()
+            .scale(dpr)
+            .translate(((ox % step) + step) % step, ((oy % step) + step) % step)
+            .scale(step / TILE)
+        );
+        ctx.globalAlpha = DOT_ALPHA * weight;
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", reset);
+    document.fonts.ready.then(reset);
+    reset();
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>

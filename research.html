@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research — Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    /* Sizes are measured from the 2400 x 1800 Figma frame and scale with the viewport. */
+    :root {
+      --bg: #111111;
+      --dot: rgba(255, 255, 255, 0.08);
+      --fg: #ffffff;
+
+      --left: clamp(16px, 3.3vw, 80px);
+      --top: clamp(12px, 3.83vw, 92px);
+      --title-size: clamp(48px, min(15.67vw, 100svh / 4.8), 376px);
+      --squeeze: 0.72;  /* Page titles are drawn narrower than the home nav in Figma */
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      position: relative;
+      height: 100vh;
+      height: 100svh;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+    }
+
+    .title {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+      z-index: 1;
+      margin: 0;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--title-size);
+      line-height: 0.93;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(2px, 0.027em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Full-width cutout photo, placed as in the Figma frame */
+    .hero {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <main class="page" data-glitch>
+    <!-- The title doubles as the way back home -->
+    <h1 class="title"><a href="index.html" data-glitch-link aria-label="Research — back to home">Research</a></h1>
+    <img class="hero" src="images/research.webp" alt="Electrode test setup: a needle electrode facing a collector plate" onerror="this.remove()">
+  </main>
+  <script src="glitch.js"></script>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raven L-1420 Payload (WebGL) — Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #111111;
+      --dot: rgba(255, 255, 255, 0.08);
+      --fg: #ffffff;
+
+      --left: clamp(16px, 3.3vw, 80px);
+      --top: clamp(12px, 3.83vw, 92px);
+      --title-size: clamp(40px, min(9.8vw, 100svh / 6.2), 235px);
+      --bar-size: clamp(22px, 2.6vw, 62px);
+      --squeeze: 0.72;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .track {
+      position: relative;
+      height: 760vh;
+      height: 760svh;
+    }
+
+    .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+    }
+
+    .stage canvas.gl {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .title {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+      z-index: 3;
+      margin: 0;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--title-size);
+      line-height: 0.93;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(2px, 0.027em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+      white-space: nowrap;
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .title--bar {
+      font-size: var(--bar-size);
+      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* version switcher */
+    .switch {
+      position: absolute;
+      top: clamp(10px, 1.6vh, 18px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      font-size: 8px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .switch a {
+      padding: 4px 8px;
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      text-decoration: none;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .switch a + a {
+      border-left: none;
+    }
+
+    .switch a.on,
+    .switch a:hover {
+      color: var(--fg);
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+
+    .load {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: var(--fg);
+      z-index: 4;
+      transition: width 0.2s ease, opacity 0.4s linear;
+    }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(14px, 2.2vh, 28px);
+      z-index: 3;
+      transform: translateX(-50%);
+      font-size: clamp(10px, 0.8vw, 12px);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+      transition: opacity 0.3s linear;
+    }
+  </style>
+</head>
+<body>
+  <main class="track">
+    <div class="stage" data-glitch>
+      <div class="load" aria-hidden="true"></div>
+      <canvas class="gl" aria-label="Raven L-1420 payload 3D model"></canvas>
+
+      <nav class="switch" aria-label="Renderer version">
+        <a class="on" href="raven-l-1420-webgl.html" aria-current="page">WebGL</a>
+        <a href="raven-l-1420-viewer.html" data-glitch-link>Viewer</a>
+        <a href="raven-rocket.html" data-glitch-link>Rocket</a>
+      </nav>
+
+      <h1 class="title title--hero"><a href="projects.html" data-glitch-link aria-label="Raven L-1420 Payload — back to projects">Raven&nbsp;L-1420<br>Payload</a></h1>
+      <p class="title title--bar" aria-hidden="true">Raven&nbsp;L-1420&nbsp;Payload</p>
+
+      <div class="hint">Scroll</div>
+    </div>
+  </main>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+    /* Same timeline as the frames page: hero, one full turn about the long
+       axis, then a zoom-out to the 45-degree diagonal. */
+    const HERO_END = 0.06;
+    const ROT_END = 0.84;
+    const HERO_THETA = 1.5859;
+    const TILT = { y: 0.35, z: 0.7854, dolly: 1.55 };
+    const FIT_W = 0.92 * 1.12;      // match the frames page's framing
+    const ANCHOR_HERO = 0.70;
+    const ANCHOR_FINALE = 0.52;
+    const SMOOTH = 0.16;
+
+    const stage = document.querySelector(".stage");
+    const canvas = document.querySelector("canvas.gl");
+    const heroTitle = document.querySelector(".title--hero");
+    const barTitle = document.querySelector(".title--bar");
+    const loadBar = document.querySelector(".load");
+    const hint = document.querySelector(".hint");
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.75;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 10);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    const key = new THREE.DirectionalLight(0xffffff, 0.5);
+    key.position.set(1.5, 2.0, 2.5);
+    scene.add(key);
+
+    const tiltG = new THREE.Group();
+    const spinG = new THREE.Group();
+    const alignG = new THREE.Group();
+    alignG.rotation.y = Math.PI / 2;
+    spinG.add(alignG);
+    tiltG.add(spinG);
+    scene.add(tiltG);
+
+    let modelLength = 0.6, modelHeight = 0.12, baseDist = 1;
+
+    /* Recreate the render materials by color, since the GLB's Onshape parts
+       carry flat factory colors: prints dark gray, fasteners black, bulkheads
+       pine, brass gold, Pi blue, GPS black + brown ceramic. */
+    function restyle(root) {
+      const seen = new Set();
+      root.traverse((o) => {
+        if (!o.isMesh) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          if (!m || seen.has(m.uuid)) continue;
+          seen.add(m.uuid);
+          const { r, g, b } = m.color;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          const mean = (r + g + b) / 3;
+          const set = (cr, cg, cb, rough, metal) => {
+            m.color.setRGB(cr, cg, cb);
+            m.roughness = rough;
+            m.metalness = metal;
+          };
+          if (r > 0.94 && g > 0.94 && b > 0.94) {
+            /* white silkscreen text: coplanar with the board face - lift it
+               in depth so it never z-fights */
+            m.polygonOffset = true;
+            m.polygonOffsetFactor = -2;
+            m.polygonOffsetUnits = -2;
+            m.roughness = 0.6;
+          } else if (r > 0.88 && g > 0.88 && b < 0.8 && spread > 0.07) {
+            /* cream pad/art layer on the boards: same treatment, one step less */
+            m.polygonOffset = true;
+            m.polygonOffsetFactor = -1;
+            m.polygonOffsetUnits = -1;
+            m.roughness = 0.6;
+          } else if (spread < 0.07 && mean > 0.33 && mean < 0.78) {
+            if (b > r + 0.02) set(0.03, 0.03, 0.035, 0.55, 0.3);   // fastener gray -> black oxide
+            else set(0.10, 0.105, 0.11, 0.6, 0.0);                 // printed parts -> dark gray
+          } else if (r > 0.92 && g > 0.78 && b > 0.4 && b < 0.6) {
+            set(0.78, 0.57, 0.22, 0.35, 1.0);                      // brass inserts + gold contacts
+          } else if (r > 0.9 && g > 0.8 && b > 0.55 && b < 0.78) {
+            set(0.80, 0.62, 0.38, 0.65, 0.0);      // pine plywood bulkhead discs
+          } else if (r > 0.7 && g > 0.5 && b > 0.3 && b < 0.78 && r > g && g > b) {
+            set(0.392, 0.201, 0.088, 0.72, 0.0);   // kraft-brown coupler tube                      // bulkheads -> pine
+          } else if (r > 0.8 && g > 0.65 && b < 0.4) {
+            set(0.45, 0.30, 0.17, 0.55, 0.0);                      // GPS ceramic -> brown
+          } else if (r < 0.1 && g > 0.5 && b < 0.1) {
+            set(0.02, 0.02, 0.022, 0.6, 0.0);                      // GPS board green -> black
+          } else if (b > 0.3 && b > r * 1.3 && !(r > 0.75 && g > 0.78 && b > 0.9)) {
+            m.roughness = 0.55;                                     // teal solder mask: satin
+          } else if (m.roughness > 0.6) {
+            m.roughness = 0.65;
+          }
+        }
+      });
+    }
+
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    loader.load("models/payload.glb",
+      (gltf) => {
+        const root = gltf.scene;
+        restyle(root);
+        const bb = new THREE.Box3().setFromObject(root);
+        const c = bb.getCenter(new THREE.Vector3());
+        const size = bb.getSize(new THREE.Vector3());
+        modelLength = size.z;
+        modelHeight = Math.max(size.x, size.y);
+        root.position.sub(c);
+        alignG.add(root);
+        loadBar.style.width = "100%";
+        setTimeout(() => (loadBar.style.opacity = "0"), 300);
+        layout();
+        requestUpdate();
+      },
+      (ev) => {
+        if (ev.total) loadBar.style.width = (ev.loaded / ev.total) * 92 + "%";
+      },
+      (err) => console.error("model load failed", err));
+
+    function layout() {
+      const w = stage.clientWidth, h = stage.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      const hFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
+      baseDist = (modelLength / 2) / Math.tan(hFov / 2) / FIT_W;
+      camera.position.set(0, 0, baseDist);
+      camera.lookAt(0, 0, 0);
+    }
+
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    const ease = (t) => t * t * (3 - 2 * t);
+
+    function scrollP() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      return max > 0 ? clamp01(window.scrollY / max) : 0;
+    }
+
+    function pose(p) {
+      if (p <= HERO_END) return { theta: HERO_THETA, t: 0 };
+      if (p <= ROT_END) {
+        const t = (p - HERO_END) / (ROT_END - HERO_END);
+        return { theta: HERO_THETA + Math.PI * 2 * t, t: 0 };
+      }
+      const t = ease(clamp01((p - ROT_END) / (1 - ROT_END)));
+      return { theta: HERO_THETA + Math.PI * 2, t };
+    }
+
+    let smoothP = scrollP();
+    let ticking = false;
+
+    function update() {
+      ticking = false;
+      const target = scrollP();
+      smoothP += (target - smoothP) * SMOOTH;
+      if (Math.abs(target - smoothP) < 0.0004) smoothP = target;
+      else requestUpdate();
+
+      const { theta, t } = pose(smoothP);
+      spinG.rotation.x = theta;
+      tiltG.rotation.y = TILT.y * t;
+      tiltG.rotation.z = TILT.z * t;
+      const dist = baseDist * (1 + (TILT.dolly - 1) * t);
+      camera.position.z = dist;
+
+      /* sit the model low in the viewport like the Figma hero */
+      const anchor = ANCHOR_HERO + (ANCHOR_FINALE - ANCHOR_HERO) * t;
+      const vfov = THREE.MathUtils.degToRad(camera.fov);
+      tiltG.position.y = (0.5 - anchor) * Math.tan(vfov / 2) * dist;
+
+      const sw = clamp01((smoothP - HERO_END * 0.7) / (HERO_END * 1.1));
+      heroTitle.style.opacity = String(1 - sw);
+      heroTitle.style.pointerEvents = sw > 0.5 ? "none" : "auto";
+      barTitle.style.opacity = String(sw);
+      hint.style.opacity = String(smoothP < 0.01 ? 1 : 0);
+
+      renderer.render(scene, camera);
+    }
+
+    function requestUpdate() {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    }
+
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", () => { layout(); requestUpdate(); });
+    layout();
+    requestUpdate();
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>

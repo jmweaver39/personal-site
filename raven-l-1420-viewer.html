@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raven L-1420 Viewer — Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #111111;
+      --dot: rgba(255, 255, 255, 0.08);
+      --fg: #ffffff;
+      --dim: rgba(255, 255, 255, 0.6);
+      --left: clamp(16px, 3.3vw, 80px);
+      --top: clamp(12px, 3.83vw, 92px);
+      --bar-size: clamp(26px, 3vw, 72px);
+      --squeeze: 0.72;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 44%) minmax(0, 56%);
+      min-height: 100vh;
+      min-height: 100svh;
+    }
+
+    .copy {
+      padding: var(--top) clamp(16px, 2.5vw, 48px) 14vh var(--left);
+      max-width: 620px;
+    }
+
+    .title {
+      margin: 0 0 0.5em;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--bar-size);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+      white-space: nowrap;
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .tagline {
+      margin: 0 0 3.2em;
+      font-size: clamp(14px, 1.1vw, 17px);
+      color: var(--dim);
+    }
+
+    h2 {
+      margin: 2.6em 0 0.7em;
+      font-size: clamp(15px, 1.15vw, 18px);
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    p,
+    li {
+      font-size: clamp(13px, 1vw, 15.5px);
+      line-height: 1.55;
+      color: var(--dim);
+    }
+
+    ul {
+      padding-left: 1.1em;
+      margin: 0;
+    }
+
+    li {
+      margin-bottom: 0.35em;
+    }
+
+    li strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    a.inline {
+      color: var(--fg);
+    }
+
+    .viewer {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+    }
+
+    .viewer canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    .viewer canvas:active {
+      cursor: grabbing;
+    }
+
+    .viewer .tip {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(14px, 2.2vh, 28px);
+      transform: translateX(-50%);
+      font-size: clamp(10px, 0.8vw, 12px);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
+    }
+
+    /* hotspots: appear when the pointer is over the model, label on hover */
+    .hotspots {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .hotspots .hs {
+      opacity: 0;
+    }
+
+    .hs {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      background: rgba(17, 17, 17, 0.35);
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      transition: background 0.15s ease, opacity 0.2s ease;
+    }
+
+    .hs::after {
+      content: "";
+      position: absolute;
+      inset: 4.5px;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0.9;
+    }
+
+    .hs:hover {
+      background: rgba(17, 17, 17, 0.8);
+    }
+
+    .hs[data-hidden] {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .hs-label {
+      position: absolute;
+      left: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: none;
+      white-space: nowrap;
+      background: rgba(17, 17, 17, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 7px 11px;
+    }
+
+    .hs.flip .hs-label {
+      left: auto;
+      right: 24px;
+    }
+
+    .hs:hover .hs-label {
+      display: block;
+    }
+
+    .hs-label .t {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .hs-label .d {
+      margin-top: 2px;
+      font-size: 10.5px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .switch {
+      position: fixed;
+      top: clamp(10px, 1.6vh, 18px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      font-size: 8px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .switch a {
+      padding: 4px 8px;
+      color: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      text-decoration: none;
+      background: rgba(17, 17, 17, 0.75);
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .switch a + a {
+      border-left: none;
+    }
+
+    .switch a.on,
+    .switch a:hover {
+      color: var(--fg);
+      border-color: rgba(255, 255, 255, 0.85);
+    }
+
+    .load {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: var(--fg);
+      z-index: 6;
+      transition: width 0.2s ease, opacity 0.4s linear;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .viewer {
+        position: relative;
+        height: 58vh;
+        height: 58svh;
+        order: -1;
+      }
+
+      .copy {
+        padding-top: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page" data-glitch>
+    <div class="load" aria-hidden="true"></div>
+
+    <nav class="switch" aria-label="Renderer version">
+      <a href="raven-l-1420-webgl.html" data-glitch-link>WebGL</a>
+      <a class="on" href="raven-l-1420-viewer.html" aria-current="page">Viewer</a>
+        <a href="raven-rocket.html" data-glitch-link>Rocket</a>
+    </nav>
+
+    <section class="copy">
+      <h1 class="title"><a href="projects.html" data-glitch-link aria-label="Raven L-1420 — back to projects">Raven&nbsp;L-1420</a></h1>
+      <p class="tagline">An interactive look at the payload — drag to orbit, scroll to zoom, pinch on touch.</p>
+
+      <h2>Overview</h2>
+      <p>The Raven L-1420 payload is a self-contained avionics and camera bay flown on NCSSM Rocketry's high-power airframe. Everything lives on a 3D-printed sled between plywood bulkheads: flight computer, radios, sensors, cameras and power, sized to slide into the booster's payload tube.</p>
+
+      <h2>Electronics</h2>
+      <ul>
+        <li><strong>Orange Pi 3B</strong> — flight computer, runs capture and logging</li>
+        <li><strong>RFD900x</strong> — 915&nbsp;MHz telemetry link to the ground station</li>
+        <li><strong>GPS tracker + LoRa</strong> — position downlink and long-range backup</li>
+        <li><strong>BMP388 / ENS160</strong> — barometric altitude and air quality</li>
+        <li><strong>Three cameras</strong> — two side-view flight cams and a slow-mo unit</li>
+        <li><strong>24&nbsp;V → 5&nbsp;V DC-DC</strong> — 5&nbsp;A supply off the flight battery</li>
+      </ul>
+
+      <h2>Structure</h2>
+      <p>The dark gray body parts are printed; bulkheads are pine plywood with brass heat-set inserts and black M3 hardware throughout. A steel U-bolt on the forward bulkhead takes the recovery harness.</p>
+
+      <h2>More</h2>
+      <p>See the <a class="inline" href="raven-l-1420-webgl.html" data-glitch-link>scroll-driven WebGL version</a> or the <a class="inline" href="raven-rocket.html" data-glitch-link>full rocket</a>.</p>
+    </section>
+
+    <section class="viewer">
+      <canvas class="gl" aria-label="Interactive Raven L-1420 payload model"></canvas>
+      <div class="hotspots" aria-hidden="true"></div>
+      <div class="tip">Drag to orbit</div>
+    </section>
+  </main>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+    const holder = document.querySelector(".viewer");
+    const canvas = document.querySelector("canvas.gl");
+    const loadBar = document.querySelector(".load");
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.75;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 10);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    const key = new THREE.DirectionalLight(0xffffff, 0.5);
+    key.position.set(1.5, 2.0, 2.5);
+    scene.add(key);
+
+    /* stand the payload upright, antenna up, like the modelviewer astronaut */
+    const group = new THREE.Group();
+    group.rotation.x = -Math.PI / 2;   // model +z (long axis) -> world +y
+    scene.add(group);
+
+    function restyle(root) {
+      const seen = new Set();
+      root.traverse((o) => {
+        if (!o.isMesh) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          if (!m || seen.has(m.uuid)) continue;
+          seen.add(m.uuid);
+          const { r, g, b } = m.color;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          const mean = (r + g + b) / 3;
+          const set = (cr, cg, cb, rough, metal) => {
+            m.color.setRGB(cr, cg, cb);
+            m.roughness = rough;
+            m.metalness = metal;
+          };
+          if (r > 0.94 && g > 0.94 && b > 0.94) {
+            /* white silkscreen text: coplanar with the board face - lift it
+               in depth so it never z-fights */
+            m.polygonOffset = true;
+            m.polygonOffsetFactor = -2;
+            m.polygonOffsetUnits = -2;
+            m.roughness = 0.6;
+          } else if (r > 0.88 && g > 0.88 && b < 0.8 && spread > 0.07) {
+            /* cream pad/art layer on the boards: same treatment, one step less */
+            m.polygonOffset = true;
+            m.polygonOffsetFactor = -1;
+            m.polygonOffsetUnits = -1;
+            m.roughness = 0.6;
+          } else if (spread < 0.07 && mean > 0.33 && mean < 0.78) {
+            if (b > r + 0.02) set(0.03, 0.03, 0.035, 0.55, 0.3);
+            else set(0.10, 0.105, 0.11, 0.6, 0.0);
+          } else if (r > 0.92 && g > 0.78 && b > 0.4 && b < 0.6) {
+            set(0.78, 0.57, 0.22, 0.35, 1.0);
+          } else if (r > 0.9 && g > 0.8 && b > 0.55 && b < 0.78) {
+            set(0.80, 0.62, 0.38, 0.65, 0.0);      // pine plywood bulkhead discs
+          } else if (r > 0.7 && g > 0.5 && b > 0.3 && b < 0.78 && r > g && g > b) {
+            set(0.392, 0.201, 0.088, 0.72, 0.0);   // kraft-brown coupler tube
+          } else if (r > 0.8 && g > 0.65 && b < 0.4) {
+            set(0.45, 0.30, 0.17, 0.55, 0.0);
+          } else if (r < 0.1 && g > 0.5 && b < 0.1) {
+            set(0.02, 0.02, 0.022, 0.6, 0.0);
+          } else if (b > 0.3 && b > r * 1.3 && !(r > 0.75 && g > 0.78 && b > 0.9)) {
+            m.roughness = 0.55;
+          } else if (m.roughness > 0.6) {
+            m.roughness = 0.65;
+          }
+        }
+      });
+    }
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.9;
+    controls.minDistance = 0.25;
+    controls.maxDistance = 2.5;
+
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    loader.load("models/payload.glb",
+      (gltf) => {
+        const root = gltf.scene;
+        restyle(root);
+        const bb = new THREE.Box3().setFromObject(root);
+        const c = bb.getCenter(new THREE.Vector3());
+        root.position.sub(c);
+        group.add(root);
+        initHotspots(root, c);
+        const size = bb.getSize(new THREE.Vector3());
+        const height = size.z;                 // long axis, now vertical
+        const vfov = THREE.MathUtils.degToRad(camera.fov);
+        const dist = (height / 2) / Math.tan(vfov / 2) / 0.72;
+        camera.position.set(dist * 0.55, height * 0.12, dist * 0.9);
+        controls.target.set(0, 0, 0);
+        loadBar.style.width = "100%";
+        setTimeout(() => (loadBar.style.opacity = "0"), 300);
+      },
+      (ev) => {
+        if (ev.total) loadBar.style.width = (ev.loaded / ev.total) * 92 + "%";
+      },
+      (err) => console.error("model load failed", err));
+
+
+    /* component touchpoints (model coordinates, metres) */
+    const HOTSPOTS = [
+      { t: "Orange Pi 3B", d: "Flight computer — runs capture + logging", a: [-0.025, 0.0018, 0.0747] },
+      { t: "MicroSD", d: "Boot + data card", a: [-0.0177, 0.002, 0.0373] },
+      { t: "SSD", d: "Onboard video storage", a: [-0.0169, 0.0065, 0.0515] },
+      { t: "Sensor board", d: "Custom carrier PCB", a: [-0.0194, 0.0, 0.1667] },
+      { t: "ENS160", d: "Air quality sensor", a: [-0.0242, 0.0102, 0.1955] },
+      { t: "BMP388", d: "Barometric altimeter", a: [-0.0242, -0.0165, 0.1953] },
+      { t: "Buzzer", d: "Recovery locator buzzer", a: [-0.0207, -0.0248, 0.1715] },
+      { t: "Lower camera", d: "Side-view flight camera", a: [-0.0486, 0.0, 0.2349] },
+      { t: "Upper camera", d: "Side-view flight camera", a: [-0.0486, -0.0, 0.2625] },
+      { t: "Slow-mo camera", d: "High-frame-rate camera", a: [0.0, -0.028, 0.0066] },
+      { t: "Battery", d: "Flight battery", a: [0.0034, 0.0186, 0.0897] },
+      { t: "DC-DC converter", d: "24 V to 5 V, 5 A power supply", a: [0.0304, 0.0, 0.0485] },
+      { t: "Power board", d: "Custom carrier PCB", a: [0.0262, -0.0, 0.153] },
+      { t: "Interface board", d: "Custom carrier PCB", a: [0.0266, 0.0001, 0.2485] },
+      { t: "RFD900x", d: "915 MHz telemetry radio", a: [0.0258, 0.0018, 0.425] },
+      { t: "GPS tracker", d: "Position downlink for recovery", a: [-0.0029, 0.0264, 0.3606] },
+      { t: "LoRa module", d: "Long-range backup radio link", a: [-0.0018, 0.021, 0.3367] },
+      { t: "Antenna", d: "Telemetry antenna", a: [0.0016, 0.0215, 0.3835] },
+    ];
+    const hsBox = document.querySelector(".hotspots");
+    const hsEls = [], hsObjs = [], hsDirs = [];
+    const hsV = new THREE.Vector3(), hsD = new THREE.Vector3(), hsQ = new THREE.Quaternion();
+    let hsRoot = null;
+
+    let hsMouse = null;
+
+    function initHotspots(root, center) {
+      hsRoot = root;
+      for (const h of HOTSPOTS) {
+        const dir = new THREE.Vector3(h.a[0] - center.x, h.a[1] - center.y, 0).normalize();
+        const r = Math.hypot(h.a[0] - center.x, h.a[1] - center.y);
+        const o = new THREE.Object3D();
+        /* sit the marker just outside the part's own surface, not its center */
+        o.position.set(center.x + dir.x * (r + 0.004), center.y + dir.y * (r + 0.004), h.a[2]);
+        root.add(o);
+        hsObjs.push(o);
+        hsDirs.push(dir);
+        const el = document.createElement("div");
+        el.className = "hs";
+        el.innerHTML = `<div class="hs-label"><div class="t">${h.t}</div><div class="d">${h.d}</div></div>`;
+        hsBox.appendChild(el);
+        hsEls.push(el);
+      }
+    }
+
+    function updateHotspots() {
+      if (!hsRoot) return;
+      const w = holder.clientWidth, h = holder.clientHeight;
+      hsRoot.getWorldQuaternion(hsQ);
+      for (let i = 0; i < hsEls.length; i++) {
+        hsObjs[i].getWorldPosition(hsV);
+        hsD.copy(hsDirs[i]).applyQuaternion(hsQ);
+        const toCam = hsV.clone().sub(camera.position).multiplyScalar(-1).normalize();
+        const facing = hsD.dot(toCam) > 0.12;
+        hsV.project(camera);
+        const el = hsEls[i];
+        if (!facing || hsV.z > 1) {
+          el.setAttribute("data-hidden", "");
+          continue;
+        }
+        const x = (hsV.x * 0.5 + 0.5) * w;
+        const y = (-hsV.y * 0.5 + 0.5) * h;
+        /* only reveal markers near the cursor */
+        let op = 0;
+        if (hsMouse) {
+          const dist = Math.hypot(x - hsMouse.x, y - hsMouse.y);
+          op = dist < 80 ? 1 : dist < 200 ? 1 - (dist - 80) / 120 : 0;
+        }
+        if (op <= 0.02) {
+          el.setAttribute("data-hidden", "");
+          continue;
+        }
+        el.removeAttribute("data-hidden");
+        el.style.opacity = op;
+        el.style.pointerEvents = op > 0.4 ? "auto" : "none";
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.classList.toggle("flip", x > w * 0.7);
+      }
+    }
+
+    function layout() {
+      const w = holder.clientWidth, h = holder.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    function tick() {
+      controls.update();
+      updateHotspots();
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+
+    /* hold still while the pointer is over the model so hotspots are hoverable */
+    holder.addEventListener("pointerenter", () => (controls.autoRotate = false));
+    holder.addEventListener("pointerleave", () => {
+      controls.autoRotate = true;
+      hsMouse = null;
+    });
+    holder.addEventListener("pointermove", (e) => {
+      const rect = holder.getBoundingClientRect();
+      hsMouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    });
+
+    window.addEventListener("resize", layout);
+    layout();
+    tick();
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>

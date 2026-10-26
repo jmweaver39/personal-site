@@ -1,0 +1,113 @@
+{
+  "_help": "Material overrides for the payload render. 'rules' are checked top to bottom against each part's name (regex, case-insensitive); first match wins. 'gray_only: true' means the rule only fires if the part's current color is a mid-gray (so e.g. the dark antenna whip is left alone). Edit colors/roughness in 'materials', or point a part at a different material, then re-run tools/render_frames.py.",
+  "materials": {
+    "pine_wood": {
+      "color": [
+        0.8,
+        0.62,
+        0.38
+      ],
+      "metallic": 0.0,
+      "roughness": 0.65
+    },
+    "brass": {
+      "color": [
+        0.78,
+        0.57,
+        0.22
+      ],
+      "metallic": 1.0,
+      "roughness": 0.35
+    },
+    "steel": {
+      "color": [
+        0.65,
+        0.66,
+        0.67
+      ],
+      "metallic": 1.0,
+      "roughness": 0.35
+    },
+    "black_oxide": {
+      "color": [
+        0.03,
+        0.03,
+        0.035
+      ],
+      "metallic": 0.3,
+      "roughness": 0.55
+    },
+    "pla_gray_dark": {
+      "color": [
+        0.1,
+        0.105,
+        0.11
+      ],
+      "metallic": 0.0,
+      "roughness": 0.6,
+      "specular": 0.2
+    },
+    "acrylic_clear": {
+      "color": [
+        0.9,
+        0.92,
+        0.95
+      ],
+      "metallic": 0.0,
+      "roughness": 0.08,
+      "alpha": 0.3
+    },
+    "black_plastic": {
+      "color": [
+        0.02,
+        0.02,
+        0.022
+      ],
+      "metallic": 0.0,
+      "roughness": 0.55
+    }
+  },
+  "rules": [
+    {
+      "match": "(MAIN BODY|TERMINAL BLOCK), DC TO DC",
+      "material": "black_plastic",
+      "note": "DC-DC converter body - black plastic (user)"
+    },
+    {
+      "match": "(Hex socket head cap screw M3|Socket button head screw M3|Hex nut grade A & B M3|pan cross head.*M3)",
+      "material": "black_oxide",
+      "note": "all M3 screws + nuts - black (user)"
+    },
+    {
+      "match": "(Hex socket head cap screw M4|Socket button head screw M4|Hex nut grade A & B M4|Hex nut 1/4-20|Threaded Rod)",
+      "material": "steel",
+      "note": "M4 + 1/4-20 hardware, threaded rods - steel (guess)"
+    },
+    {
+      "match": "Brass Insert",
+      "material": "brass",
+      "note": "brass (user)"
+    },
+    {
+      "match": "U-Bolt",
+      "material": "steel",
+      "note": "metal (user)"
+    },
+    {
+      "match": "Bulkhead",
+      "material": "pine_wood",
+      "note": "the tan plates - pine wood (user)"
+    },
+    {
+      "match": "Acrylic",
+      "material": "acrylic_clear",
+      "note": "camera/runcam windows - clear acrylic (guess)"
+    },
+    {
+      "match": "(Middle Payload|Battery Cover|Microphone Cover|Microphone Mount|Runcam Mount|Lower Mid Brace|Slow Motion Bracket|Camera Cover|Camera Seal|M3 Hex Holder|Brace|Part [0-9])",
+      "material": "pla_gray_dark",
+      "gray_only": true,
+      "note": "main printed structure - darker gray PLA (user)"
+    }
+  ]
+}

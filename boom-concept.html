@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SRX-AB-001 Concept — Jay Weaver</title>
+  <style>
+    :root {
+      --bg: #f2f1ef;
+      --dot: rgba(0, 0, 0, 0.14);
+      --fg: #111111;
+      --dim: rgba(17, 17, 17, 0.5);
+      --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .track {
+      position: relative;
+      height: 420vh;
+      height: 420svh;
+    }
+
+    .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+    }
+
+    canvas.gl {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .tag {
+      position: absolute;
+      top: clamp(10px, 1.6vh, 18px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--dim);
+    }
+
+    .tag b {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    .spec {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(36px, 7vh, 72px);
+      transform: translateX(-50%);
+      z-index: 2;
+      font: 500 9px var(--mono);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    .spec span {
+      color: var(--dim);
+      margin-right: 0.8em;
+    }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 2;
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--dim);
+      transition: opacity 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="track">
+    <div class="stage">
+      <canvas class="gl" aria-label="SRX-AB-001 boom plane concept, turning as you scroll"></canvas>
+      <div class="tag"><b>SRX-AB-001</b> &nbsp;·&nbsp; Boom plane concept</div>
+      <div class="spec" data-at="0"><span>Length</span>2.22 m</div>
+      <div class="spec" data-at="0.68"><span>Span</span>0.71 m</div>
+      <div class="spec" data-at="1"><span>Powerplant</span>KingTech K-450 turbojet</div>
+      <div class="hint">Scroll</div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+    const SMOOTH = 0.14;
+    const NOSE_LEN = 0.651;          // forward nose section, CAD metres from the tip
+    const TOW = 0.004;               // carbon tow width, metres
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    const easeSoft = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+
+    const stage = document.querySelector(".stage");
+    const canvas = document.querySelector("canvas.gl");
+    const hint = document.querySelector(".hint");
+    const specs = [...document.querySelectorAll(".spec")];
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.85;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    const key = new THREE.DirectionalLight(0xffffff, 0.9);
+    key.position.set(-2, 4, 3);
+    scene.add(key);
+
+    /* classic 2x2 twill carbon */
+    const twillTex = (() => {
+      const S = 512, cell = 16;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const g = c.getContext("2d");
+      const img = g.createImageData(S, S);
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          const xi = Math.floor(x / cell), yi = Math.floor(y / cell);
+          const fx = (x % cell) / cell, fy = (y % cell) / cell;
+          const over = (((xi - yi) % 4) + 4) % 4 < 2;
+          const val = over ? 26 + Math.sin(fx * Math.PI) * 30 : 18 + Math.sin(fy * Math.PI) * 20;
+          const o = (y * S + x) * 4;
+          img.data[o] = val;
+          img.data[o + 1] = val + 2;
+          img.data[o + 2] = val + 5;
+          img.data[o + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    })();
+
+    /* the CAD export has no usable UVs across the skin, so the weave is
+       projected triplanar in the mesh's own space and stays put as it turns */
+    const carbonMat = new THREE.MeshPhysicalMaterial({
+      map: twillTex, color: 0xffffff, roughness: 0.42, metalness: 0.0,
+      clearcoat: 0.4, clearcoatRoughness: 0.24, envMapIntensity: 0.55,
+    });
+    carbonMat.onBeforeCompile = (sh) => {
+      sh.uniforms.uWeave = { value: 1 / (TOW * 32) };
+      sh.vertexShader = sh.vertexShader
+        .replace("#include <common>", "#include <common>\nvarying vec3 vObjPos;\nvarying vec3 vObjNrm;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvObjPos = position;\nvObjNrm = normal;");
+      sh.fragmentShader = sh.fragmentShader
+        .replace("#include <common>", "#include <common>\nuniform float uWeave;\nvarying vec3 vObjPos;\nvarying vec3 vObjNrm;")
+        .replace("#include <map_fragment>", `
+          vec3 bw = pow(abs(normalize(vObjNrm)), vec3(4.0));
+          bw /= (bw.x + bw.y + bw.z);
+          vec3 wp = vObjPos * uWeave;
+          vec4 weave = texture2D(map, wp.yz) * bw.x
+                     + texture2D(map, wp.zx) * bw.y
+                     + texture2D(map, wp.xy) * bw.z;
+          diffuseColor *= weave;`);
+    };
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.55, metalness: 0.0 });
+    const casingMat = new THREE.MeshStandardMaterial({ color: 0xb9bdc2, roughness: 0.32, metalness: 1.0 });
+    const nozzleMat = new THREE.MeshStandardMaterial({ color: 0x86705a, roughness: 0.38, metalness: 1.0 });
+
+    /* CAD (x span, y nose->tail, z up) -> scene (x nose-left, y up, z span) */
+    const plane = new THREE.Group();
+    const orient = new THREE.Group();
+    orient.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+      new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0)));
+    plane.add(orient);
+    scene.add(plane);
+
+    let ready = false, fitLen = 2.2;
+
+    /* split one geometry's triangles into two material groups */
+    function splitByTriangle(geo, test) {
+      const pos = geo.attributes.position;
+      const idx = geo.index ? geo.index.array : Array.from({ length: pos.count }, (_, i) => i);
+      const a = [], b = [];
+      const c = new THREE.Vector3(), v = new THREE.Vector3();
+      for (let i = 0; i < idx.length; i += 3) {
+        c.set(0, 0, 0);
+        for (let k = 0; k < 3; k++) c.add(v.fromBufferAttribute(pos, idx[i + k]));
+        c.multiplyScalar(1 / 3);
+        (test(c) ? b : a).push(idx[i], idx[i + 1], idx[i + 2]);
+      }
+      geo.setIndex(a.concat(b));
+      geo.clearGroups();
+      geo.addGroup(0, a.length, 0);
+      geo.addGroup(a.length, b.length, 1);
+    }
+
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    loader.load("models/boom.glb", (gltf) => {
+      const root = gltf.scene;
+      root.traverse((o) => {
+        if (!o.isMesh) return;
+        const c = o.material.color;
+        if (Math.abs(c.r - c.b) < 0.02 && c.r < 0.4) {
+          /* airframe: flat-black nose section, carbon everywhere else */
+          o.geometry.computeBoundingBox();
+          const tipY = o.geometry.boundingBox.min.y;
+          splitByTriangle(o.geometry, (p) => p.y < tipY + NOSE_LEN);
+          o.material = [carbonMat, noseMat];
+        } else if (c.r - c.b > 0.04) {
+          o.material = nozzleMat;
+        } else {
+          o.material = casingMat;
+        }
+      });
+      orient.add(root);
+
+      const box = new THREE.Box3().setFromObject(plane);
+      const ctr = box.getCenter(new THREE.Vector3());
+      orient.position.sub(ctr);
+      fitLen = box.max.x - box.min.x;
+      collectSamples();
+      ready = true;
+      layout();
+    }, undefined, (e) => console.error("plane load failed", e));
+
+    /* camera keyframes around the plane: azimuth, elevation (deg), distance x */
+    const KEYS = [
+      { p: 0.0, az: 0, el: 0 },       // flat side profile, nose left
+      { p: 0.06, az: 0, el: 0 },      // held a moment before turning
+      { p: 0.38, az: -38, el: 20 },   // front three-quarter
+      { p: 0.68, az: 0, el: 89.5 },   // plan view
+      { p: 1.0, az: 132, el: 18 },    // rear three-quarter, nozzle
+    ];
+    /* every view fills 80% of the width (or 72% of the height, whichever
+       binds) and is centred on what is actually on screen, so the
+       perspective-heavy three-quarter views don't drift toward the tail */
+    const FILL_W = 0.8, FILL_H = 0.72;
+
+    const samples = [];
+    function collectSamples() {
+      plane.updateMatrixWorld(true);
+      let total = 0;
+      plane.traverse((o) => { if (o.isMesh) total += o.geometry.attributes.position.count; });
+      const step = Math.max(1, Math.floor(total / 6000));
+      const v = new THREE.Vector3();
+      plane.traverse((o) => {
+        if (!o.isMesh) return;
+        const pos = o.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i += step) {
+          samples.push(v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).clone());
+        }
+      });
+    }
+
+    const viewDir = (az, el) => new THREE.Vector3(
+      Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az));
+
+    const solver = new THREE.PerspectiveCamera();
+    function solveKey(k, startDist) {
+      solver.fov = camera.fov;
+      solver.aspect = camera.aspect;
+      solver.near = camera.near;
+      solver.far = camera.far;
+      solver.updateProjectionMatrix();
+      const dir = viewDir(THREE.MathUtils.degToRad(k.az), THREE.MathUtils.degToRad(k.el));
+      const tanV = Math.tan(THREE.MathUtils.degToRad(solver.fov) / 2);
+      const T = new THREE.Vector3(), p = new THREE.Vector3();
+      const right = new THREE.Vector3(), up = new THREE.Vector3();
+      let D = startDist;
+      for (let it = 0; it < 5; it++) {
+        solver.position.copy(T).addScaledVector(dir, D);
+        solver.lookAt(T);
+        solver.updateMatrixWorld();
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const s of samples) {
+          p.copy(s).project(solver);
+          if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+          if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
+        }
+        right.setFromMatrixColumn(solver.matrixWorld, 0);
+        up.setFromMatrixColumn(solver.matrixWorld, 1);
+        T.addScaledVector(right, ((x0 + x1) / 2) * D * tanV * solver.aspect)
+         .addScaledVector(up, ((y0 + y1) / 2) * D * tanV);
+        D *= Math.max((x1 - x0) / (2 * FILL_W), (y1 - y0) / (2 * FILL_H));
+      }
+      k.T = T;
+      k.D = D;
+    }
+
+    let baseDist = 6;
+    function layout() {
+      const w = stage.clientWidth, h = stage.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      const hHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect;
+      baseDist = (fitLen / 2) / hHalf / FILL_W;
+      if (samples.length) KEYS.forEach((k) => solveKey(k, baseDist));
+    }
+    window.addEventListener("resize", layout);
+    layout();
+
+    function scrollP() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      return max > 0 ? clamp01(window.scrollY / max) : 0;
+    }
+
+    let smoothP = scrollP();
+    const aim = new THREE.Vector3();
+    function tick() {
+      const target = scrollP();
+      smoothP += (target - smoothP) * SMOOTH;
+      if (Math.abs(target - smoothP) < 0.0004) smoothP = target;
+
+      let k = 0;
+      while (k < KEYS.length - 2 && smoothP > KEYS[k + 1].p) k++;
+      const A = KEYS[k], B = KEYS[k + 1];
+      const f = easeSoft(clamp01((smoothP - A.p) / (B.p - A.p)));
+      const az = THREE.MathUtils.degToRad(A.az + (B.az - A.az) * f);
+      const el = THREE.MathUtils.degToRad(A.el + (B.el - A.el) * f);
+      if (A.T) {
+        aim.lerpVectors(A.T, B.T, f);
+        camera.position.copy(aim).addScaledVector(viewDir(az, el), A.D + (B.D - A.D) * f);
+        camera.lookAt(aim);
+      } else {
+        camera.position.copy(viewDir(az, el)).multiplyScalar(baseDist);
+        camera.lookAt(0, 0, 0);
+      }
+
+      specs.forEach((el2) => {
+        const at = parseFloat(el2.dataset.at);
+        el2.style.opacity = String(clamp01(1 - Math.abs(smoothP - at) / 0.07));
+      });
+      hint.style.opacity = smoothP < 0.02 ? "1" : "0";
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>

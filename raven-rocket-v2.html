@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raven L-1420 Rocket (updated payload) — Jay Weaver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f2f1ef;
+      --dot: rgba(0, 0, 0, 0.14);
+      --fg: #111111;
+
+      --left: clamp(16px, 3.3vw, 80px);
+      --top: clamp(12px, 3.83vw, 92px);
+      --title-size: clamp(40px, min(9.8vw, 100svh / 6.2), 235px);
+      --bar-size: clamp(22px, 2.6vw, 62px);
+      --squeeze: 0.72;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .track {
+      position: relative;
+      height: 1150vh;
+      height: 1150svh;
+    }
+
+    .stage {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      height: 100svh;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+      background-size: 16px 16px;
+    }
+
+    .clouds {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+    .clouds div {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      image-rendering: pixelated;
+      transform-origin: center;
+    }
+
+    canvas.telem {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 150px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+
+    .stage canvas.gl {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .title {
+      position: absolute;
+      top: var(--top);
+      left: var(--left);
+      z-index: 3;
+      margin: 0;
+      font-family: "Anton", "Impact", sans-serif;
+      font-weight: 400;
+      font-size: var(--title-size);
+      line-height: 0.93;
+      letter-spacing: -0.02em;
+      color: transparent;
+      -webkit-text-stroke: max(2px, 0.027em) var(--fg);
+      transform: scaleX(var(--squeeze));
+      transform-origin: left top;
+      white-space: nowrap;
+    }
+
+    .title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .title--bar {
+      font-size: var(--bar-size);
+      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .sections {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .sec {
+      position: absolute;
+      transform: translateX(-50%);
+      text-align: center;
+      opacity: 0;
+      max-width: 260px;
+    }
+
+    .sec::before {
+      content: "";
+      display: block;
+      width: 1px;
+      height: clamp(22px, 4vh, 44px);
+      margin: 0 auto 10px;
+      background: rgba(17, 17, 17, 0.45);
+    }
+
+    .sec .t {
+      font-size: clamp(11px, 1vw, 14px);
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(17, 17, 17, 0.95);
+      white-space: nowrap;
+    }
+
+    .sec .d {
+      margin-top: 3px;
+      font-size: clamp(10px, 0.85vw, 12.5px);
+      line-height: 1.4;
+      color: rgba(17, 17, 17, 0.6);
+    }
+
+    .dots {
+      position: absolute;
+      right: clamp(14px, 1.8vw, 30px);
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .dots button {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 1px solid rgba(17, 17, 17, 0.5);
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .dots button.on {
+      background: var(--fg);
+      border-color: var(--fg);
+      transform: scale(1.3);
+    }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(14px, 2.2vh, 28px);
+      z-index: 3;
+      transform: translateX(-50%);
+      font-size: clamp(10px, 0.8vw, 12px);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(17, 17, 17, 0.5);
+      transition: opacity 0.3s linear;
+    }
+
+    .callouts {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .callouts svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .co {
+      position: absolute;
+      white-space: nowrap;
+      opacity: 0;
+    }
+
+    .co .t {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(17, 17, 17, 0.95);
+    }
+
+    .co .d {
+      margin-top: 2px;
+      font: 500 9px ui-monospace, "SF Mono", Menlo, monospace;
+      letter-spacing: 0.08em;
+      color: rgba(17, 17, 17, 0.55);
+    }
+  </style>
+</head>
+<body>
+  <main class="track">
+    <div class="stage" data-glitch>
+      <div class="clouds" aria-hidden="true"><div></div><div></div></div>
+      <canvas class="gl" aria-label="Raven L-1420 full rocket, splitting into sections"></canvas>
+      <canvas class="telem" aria-hidden="true"></canvas>
+
+      <div class="sections" aria-hidden="true">
+        <div class="sec" data-i="0">
+          <div class="t">Nose Cone</div>
+          <div class="d">Pops free for recovery deployment</div>
+        </div>
+        <div class="sec" data-i="1">
+          <div class="t">Payload + Drogue Bays</div>
+          <div class="d">The Raven L-1420 rides in the upper tube, chutes below</div>
+        </div>
+        <div class="sec" data-i="2">
+          <div class="t">Fin Can</div>
+          <div class="d">Motor mount and fins — the business end</div>
+        </div>
+      </div>
+
+      <nav class="dots" aria-label="Stages">
+        <button data-p="0" aria-label="Assembled"></button>
+        <button data-p="0.24" aria-label="Separated"></button>
+        <button data-p="0.4" aria-label="Payload bay close-up"></button>
+        <button data-p="0.61" aria-label="Interior revealed"></button>
+        <button data-p="1" aria-label="Onboard camera"></button>
+      </nav>
+
+      <div class="callouts" aria-hidden="true">
+        <svg><g style="stroke:rgba(17,17,17,0.5);stroke-width:1;fill:none"></g></svg>
+        <div class="co"><div class="t">915 MHz half-wave dipole</div><div class="d">RFD900x telemetry · 3 dBi</div></div>
+        <div class="co"><div class="t">Quarter-wave LoRa</div><div class="d">λ/4 monopole</div></div>
+        <div class="co"><div class="t">M9N GPS</div><div class="d">u-blox GNSS</div></div>
+      </div>
+      <div class="hint">Scroll to separate</div>
+    </div>
+  </main>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+    import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+    import { STLLoader } from "three/addons/loaders/STLLoader.js";
+
+    /* The real RAVEN airframe, split into its three sections (nose + payload
+       bay / drogue bay / fin can) along the drogue tube's extent. Scroll
+       slides the sections apart along the axis. Model axis: +z toward the
+       nose; metres. */
+    const GAP = 0.42;
+    const HERO_END = 0.05, SPLIT_END = 0.26;
+    const ZOOM0 = 0.29, ZOOM1 = 0.42;      // close in on the nose section
+    const REV0 = 0.45, REV1 = 0.60;        // shells fade, payload spins
+    const POV0 = 0.62, POV1 = 0.72;        // fly into the onboard camera
+    const SEP0 = 0.76, SEP1 = 1.0;         // slow-motion separation, filmed
+    const SEP_GAP = 2.0;                  // metres of slow-mo separation
+    const BUMP_ROLL = 0.77;                // rolls the camera pod to the top
+    const easeSoft = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    const SMOOTH = 0.16;
+
+    const stage = document.querySelector(".stage");
+    const canvas = document.querySelector("canvas.gl");
+    const hint = document.querySelector(".hint");
+    const secEls = [...document.querySelectorAll(".sec")];
+    const coEls = [...document.querySelectorAll(".co")];
+    const coG = document.querySelector(".callouts g");
+    const SVGNS = "http://www.w3.org/2000/svg";
+    const coLines = coEls.map(() => {
+      const pl = document.createElementNS(SVGNS, "polyline");
+      const dot = document.createElementNS(SVGNS, "circle");
+      dot.setAttribute("r", "2.5");
+      dot.style.fill = "rgba(17,17,17,0.85)";
+      dot.style.stroke = "none";
+      coG.append(pl, dot);
+      return { pl, dot };
+    });
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.75;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 600);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    const key = new THREE.DirectionalLight(0xffffff, 0.5);
+    key.position.set(2, 3, 4);
+    scene.add(key);
+    /* fill from the aft side so the end-on bulkhead view reads true */
+    const aftFill = new THREE.DirectionalLight(0xffffff, 1.35);
+    aftFill.position.set(4, 0.6, 0.8);
+    scene.add(aftFill);
+    /* daylight through the opening joint, only during the filmed separation */
+    const sepLight = new THREE.DirectionalLight(0xffffff, 0);
+    sepLight.position.set(-4, 1.2, 0.6);
+    scene.add(sepLight);
+
+    /* seamless carbon-fiber hex weave, generated per pixel */
+    const carbonTex = (() => {
+      const S = 512, hexS = 30;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const g = c.getContext("2d");
+      const img = g.createImageData(S, S);
+      const SQ3 = Math.sqrt(3);
+      const hash = (a, b) => {
+        let h = (a * 374761393 + b * 668265263) | 0;
+        h = ((h ^ (h >> 13)) * 1274126177) | 0;
+        return ((h ^ (h >> 16)) >>> 0) / 4294967295;
+      };
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          const q = ((2 / 3) * x) / hexS;
+          const r = ((-1 / 3) * x + (SQ3 / 3) * y) / hexS;
+          let rq = Math.round(q), rr = Math.round(r);
+          const rs = Math.round(-q - r);
+          const dq = Math.abs(rq - q), dr = Math.abs(rr - r), ds = Math.abs(rs + q + r);
+          if (dq > dr && dq > ds) rq = -rr - rs;
+          else if (dr > ds) rr = -rq - rs;
+          const cx = hexS * 1.5 * rq;
+          const cy = hexS * SQ3 * (rr + rq / 2);
+          const dx = x - cx, dy = y - cy;
+          const d = Math.max(Math.abs(dx) * 0.866 + Math.abs(dy) * 0.5, Math.abs(dy));
+          const seam = d > hexS * 0.74;
+          const h1 = hash(rq, rr);
+          const dir = Math.floor(h1 * 3);
+          const ang = (dir * Math.PI) / 3;
+          const stripe = Math.sin((dx * Math.cos(ang) + dy * Math.sin(ang)) * 0.9) * 0.5 + 0.5;
+          let val;
+          if (seam) val = 52 + h1 * 8;
+          else val = 19 + h1 * 10 + stripe * 17;
+          const o = (y * S + x) * 4;
+          img.data[o] = val;
+          img.data[o + 1] = val + 2;
+          img.data[o + 2] = val + 5;
+          img.data[o + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.anisotropy = 8;
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    })();
+    /* tip-over backdrop: nine 144p black-and-white frames, straight down to
+       the horizon, crossfaded with the scroll as the rocket noses over */
+    const cloudsEl = document.querySelector(".clouds");
+    const TIP_N = 323;
+    const tipSrc = (i) => `images/fr${i}.jpg`;
+    for (let i = 0; i < TIP_N; i++) new Image().src = tipSrc(i);
+    const tipA = cloudsEl.children[0], tipB = cloudsEl.children[1];
+    /* OpenRocket export drives the filmed separation: ejection at T+24 s */
+    const EJECT_T = 24, FEED_SPAN = 5;
+    let fd = null;
+    fetch("data/rocket.csv").then((r) => r.text()).then((text) => {
+      const t = [], alt = [], vel = [], zen = [], latd = [];
+      for (const line of text.split("\n")) {
+        if (line.startsWith("#") || !line.trim()) continue;
+        const v = line.split(",");
+        t.push(+v[0]); alt.push(+v[1]); vel.push(+v[3]); zen.push(+v[19]); latd.push(+v[9]);
+      }
+      if (t.length) fd = { t, alt, vel, zen, latd };
+    }).catch(() => {});
+    function fdAt(arr, tt) {
+      const T = fd.t;
+      let lo = 0, hi = T.length - 1;
+      while (hi - lo > 1) { const m2 = (lo + hi) >> 1; T[m2] <= tt ? (lo = m2) : (hi = m2); }
+      const a = arr[lo], b = arr[hi];
+      if (Number.isNaN(a) || Number.isNaN(b)) return tt - T[lo] < T[hi] - tt ? a : b;
+      return a + (b - a) * ((tt - T[lo]) / (T[hi] - T[lo] || 1));
+    }
+    /* the launch site itself, posed below the camera at the sim's altitude;
+       capture spans 6844 x 6417 m, edges smeared outward as haze */
+    let groundReady = false;
+    const groundTex = new THREE.TextureLoader().load("images/launch-site.jpg", () => {
+      groundTex.colorSpace = THREE.SRGBColorSpace;
+      groundReady = true;
+    });
+    const SCN = 1 / 100;                 // scene units per metre of flight data
+    const SMEAR = 4;
+    groundTex.repeat.set(SMEAR, SMEAR);
+    groundTex.offset.set(-(SMEAR - 1) / 2, -(SMEAR - 1) / 2);
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(68.44 * SMEAR, 64.17 * SMEAR),
+      new THREE.MeshBasicMaterial({ map: groundTex, toneMapped: false })
+    );
+    ground.rotation.y = -Math.PI / 2;    // face back toward the onboard camera
+    ground.visible = false;
+    const feedBg = new THREE.Color(0x565c60);
+    const feedFog = new THREE.Fog(0xaeb4b8, 25, 80);
+    const groundRig = new THREE.Group();
+    groundRig.add(ground);
+    scene.add(groundRig);
+    /* synthetic sky for the pan-up: haze at the horizon, blue-grey above */
+    const skyTex = (() => {
+      const c = document.createElement("canvas");
+      c.width = 256;
+      c.height = 256;
+      const g = c.getContext("2d");
+      const grad = g.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0, "#5f7d9c");      // zenith
+      grad.addColorStop(0.38, "#8fa2b4");
+      grad.addColorStop(0.48, "#a7b3bd");
+      grad.addColorStop(0.5, "#aeb4b8");    // horizon = fog colour
+      grad.addColorStop(1, "#aeb4b8");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 256, 256);
+      g.filter = "blur(3px)";
+      for (let i = 0; i < 18; i++) {
+        g.fillStyle = `rgba(255,255,255,${0.09 + Math.random() * 0.18})`;
+        const y = 70 + Math.random() * 52;
+        g.beginPath();
+        g.ellipse(Math.random() * 256, y, 18 + Math.random() * 40, 3 + Math.random() * 4, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.filter = "none";
+      const t2 = new THREE.CanvasTexture(c);
+      t2.colorSpace = THREE.SRGBColorSpace;
+      return t2;
+    })();
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(300, 24, 24),
+      new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, toneMapped: false, fog: false })
+    );
+    sky.rotation.z = Math.PI / 2;         // pole along the rig's real up
+    sky.visible = false;
+    groundRig.add(sky);
+    let tipI = -1;
+
+    const carbonMats = new Set();
+    const kraftMats = new Set();
+    const acrylicMat = new THREE.MeshStandardMaterial({
+      color: 0xdfe6ea, transparent: true, opacity: 0.38,
+      roughness: 0.12, metalness: 0.0, depthWrite: false,
+    });
+    const pineMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setRGB(0.80, 0.62, 0.38), roughness: 0.65, metalness: 0.0,
+    });
+
+    /* classic 2x2 twill carbon for the fins */
+    const twillTex = (() => {
+      const S = 512, cell = 16;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const g = c.getContext("2d");
+      const img = g.createImageData(S, S);
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          const xi = Math.floor(x / cell), yi = Math.floor(y / cell);
+          const fx = (x % cell) / cell, fy = (y % cell) / cell;
+          const over = (((xi - yi) % 4) + 4) % 4 < 2;
+          let val;
+          if (over) val = 26 + Math.sin(fx * Math.PI) * 30;
+          else val = 18 + Math.sin(fy * Math.PI) * 20;
+          const o = (y * S + x) * 4;
+          img.data[o] = val;
+          img.data[o + 1] = val + 2;
+          img.data[o + 2] = val + 5;
+          img.data[o + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.anisotropy = 8;
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    })();
+    const twillMat = new THREE.MeshStandardMaterial({
+      map: twillTex, color: 0xffffff, roughness: 0.35, metalness: 0.3,
+    });
+    const retainerMat = new THREE.MeshStandardMaterial({
+      color: 0x101113, roughness: 0.3, metalness: 0.85,
+    });
+    /* Blue Tube 2.0 airframe interior */
+    const blueTubeMat = new THREE.MeshStandardMaterial({
+      color: 0x68797c, roughness: 0.8, metalness: 0.0,
+    });
+    const noseMat = new THREE.MeshStandardMaterial({
+      color: 0x141517, roughness: 0.55, metalness: 0.0,
+    });
+    /* black solder mask on the breakout boards (same grey as the airframe
+       in the CAD, so it has to be peeled out of the shell by position) */
+    const pcbMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setRGB(0.035, 0.037, 0.04), roughness: 0.5, metalness: 0.0,
+    });
+
+    /* rocket (tilt) -> asm (recenter) -> orient (+z -> -x, nose left) -> s1..s3 */
+    const rocket = new THREE.Group();
+    const asm = new THREE.Group();
+    const orient = new THREE.Group();
+    orient.rotation.y = -Math.PI / 2;
+    asm.add(orient);
+    rocket.add(asm);
+    scene.add(rocket);
+    const secs = [new THREE.Group(), new THREE.Group(), new THREE.Group()];
+    secs.forEach((s) => orient.add(s));
+
+    /* packed drogue chute, pulled out on the cord during separation;
+       only rendered from inside the onboard camera view */
+    const chute = (() => {
+      const geo = new THREE.IcosahedronGeometry(0.058, 3);
+      const p = geo.attributes.position;
+      const v3 = new THREE.Vector3();
+      for (let i = 0; i < p.count; i++) {
+        v3.fromBufferAttribute(p, i);
+        const n = 1 + 0.16 * Math.sin(v3.x * 55) * Math.sin(v3.y * 47) + 0.1 * Math.sin(v3.z * 60);
+        p.setXYZ(i, v3.x * n, v3.y * n, v3.z * n * 0.75);
+      }
+      geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: 0xd85a36, roughness: 0.92, metalness: 0.0,
+      }));
+      m.position.set(0, 0, 0.32);
+      m.visible = false;
+      orient.add(m);
+      return m;
+    })();
+
+    /* yellow nylon webbing: flat 1x5 strap with a woven chevron braid */
+    const braidTex = (() => {
+      const S = 64;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const g = c.getContext("2d");
+      const img = g.createImageData(S, S);
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          const half = x < S / 2 ? 1 : -1;
+          const band = Math.floor((x * half + y * 1.4) / 5) & 1;
+          const ridge = Math.abs(((x * half + y * 1.4) % 5) - 2.5) / 2.5;
+          const l = (band ? 0.95 : 0.72) * (0.82 + 0.18 * ridge);
+          const o = (y * S + x) * 4;
+          img.data[o] = 226 * l;
+          img.data[o + 1] = 182 * l;
+          img.data[o + 2] = 46 * l;
+          img.data[o + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = THREE.ClampToEdgeWrapping;
+      t.wrapT = THREE.RepeatWrapping;
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    })();
+    const rope = new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshStandardMaterial({ map: braidTex, roughness: 0.88, metalness: 0.0 })
+    );
+    rope.visible = false;
+    rope.frustumCulled = false;
+    orient.add(rope);
+    /* ejection-charge puff at the separation joint */
+    const puffTex = (() => {
+      const S = 128;
+      const c = document.createElement("canvas");
+      c.width = c.height = S;
+      const g = c.getContext("2d");
+      const grad = g.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2);
+      grad.addColorStop(0, "rgba(255,250,240,0.95)");
+      grad.addColorStop(0.25, "rgba(230,225,215,0.7)");
+      grad.addColorStop(0.6, "rgba(180,178,172,0.3)");
+      grad.addColorStop(1, "rgba(160,158,152,0)");
+      g.fillStyle = grad;
+      g.fillRect(0, 0, S, S);
+      const t2 = new THREE.CanvasTexture(c);
+      t2.colorSpace = THREE.SRGBColorSpace;
+      return t2;
+    })();
+    const puff = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: puffTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false,
+    }));
+    puff.visible = false;
+    orient.add(puff);
+    /* flat strap swept along the cord's path: 12mm wide, 2.4mm thick,
+       wide face kept horizontal */
+    const ROPE_W = 0.006, ROPE_T = 0.0012;
+    const ropeUp = new THREE.Vector3(0, 1, 0);
+    function ropeGeo(pts) {
+      const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+      const N = 60;
+      const pos = [], uv = [], idx = [];
+      const p = new THREE.Vector3(), tan = new THREE.Vector3(),
+        side = new THREE.Vector3(), nrm = new THREE.Vector3();
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        curve.getPoint(t, p);
+        curve.getTangent(t, tan);
+        side.crossVectors(tan, ropeUp).normalize();
+        nrm.crossVectors(side, tan).normalize();
+        const v = t * 26;
+        /* ring of 4 corners: bottom edge, top edge, both strap faces */
+        pos.push(
+          p.x - side.x * ROPE_W - nrm.x * ROPE_T, p.y - side.y * ROPE_W - nrm.y * ROPE_T, p.z - side.z * ROPE_W - nrm.z * ROPE_T,
+          p.x + side.x * ROPE_W - nrm.x * ROPE_T, p.y + side.y * ROPE_W - nrm.y * ROPE_T, p.z + side.z * ROPE_W - nrm.z * ROPE_T,
+          p.x + side.x * ROPE_W + nrm.x * ROPE_T, p.y + side.y * ROPE_W + nrm.y * ROPE_T, p.z + side.z * ROPE_W + nrm.z * ROPE_T,
+          p.x - side.x * ROPE_W + nrm.x * ROPE_T, p.y - side.y * ROPE_W + nrm.y * ROPE_T, p.z - side.z * ROPE_W + nrm.z * ROPE_T
+        );
+        uv.push(0, v, 1, v, 1, v, 0, v);
+      }
+      for (let i = 0; i < N; i++) {
+        const r = i * 4, s = r + 4;
+        for (let k = 0; k < 4; k++) {
+          const a = r + k, b = r + ((k + 1) % 4), c2 = s + k, d = s + ((k + 1) % 4);
+          idx.push(a, b, c2, b, d, c2);
+        }
+      }
+      const g2 = new THREE.BufferGeometry();
+      g2.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      g2.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+      g2.setIndex(idx);
+      g2.computeVertexNormals();
+      return g2;
+    }
+
+    function restyle(root) {
+      const seen = new Set();
+      root.traverse((o) => {
+        if (!o.isMesh) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) {
+          if (!m || seen.has(m.uuid)) continue;
+          seen.add(m.uuid);
+          const { r, g, b } = m.color;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          const mean = (r + g + b) / 3;
+          const set = (cr, cg, cb, rough, metal) => {
+            m.color.setRGB(cr, cg, cb);
+            m.roughness = rough;
+            m.metalness = metal;
+          };
+          if (r > 0.94 && g > 0.94 && b > 0.94 && spread < 0.05) {
+            /* white lens covers: clear acrylic like the camera plate */
+            o.material = Array.isArray(o.material)
+              ? o.material.map((mm) => (mm === m ? acrylicMat : mm))
+              : acrylicMat;
+          } else if (r > 0.88 && g > 0.88 && b < 0.8 && spread > 0.07) {
+            m.polygonOffset = true;
+            m.polygonOffsetFactor = -1;
+            m.polygonOffsetUnits = -1;
+            m.roughness = 0.6;
+          } else if (spread < 0.07 && mean >= 0.78 && mean < 0.94) {
+            /* acrylic cover plates: clear, the grey disc shows through */
+            o.material = Array.isArray(o.material)
+              ? o.material.map((mm) => (mm === m ? acrylicMat : mm))
+              : acrylicMat;
+          } else if (spread < 0.07 && (mean >= 0.94 || (mean > 0.26 && mean <= 0.33))) {
+            /* airframe: carbon fiber hex weave */
+            set(1, 1, 1, 0.38, 0.25);
+            m.map = carbonTex;
+            carbonMats.add(m.uuid);
+          } else if (spread < 0.07 && mean > 0.33 && mean < 0.78) {
+            if (b > r + 0.02) set(0.03, 0.03, 0.035, 0.55, 0.3);
+            else set(0.10, 0.105, 0.11, 0.6, 0.0);
+          } else if (r > 0.92 && g > 0.78 && b > 0.4 && b < 0.6) {
+            set(0.78, 0.57, 0.22, 0.35, 1.0);
+          } else if (r > 0.9 && g > 0.8 && b > 0.55 && b < 0.78) {
+            set(0.80, 0.62, 0.38, 0.65, 0.0);      // pine plywood bulkhead discs
+          } else if (r > 0.7 && g > 0.5 && b > 0.3 && b < 0.78 && r > g && g > b) {
+            set(0.392, 0.201, 0.088, 0.72, 0.0);   // kraft-brown coupler tube
+            kraftMats.add(m.uuid);
+          } else if (m.roughness > 0.6) {
+            m.roughness = 0.6;
+          }
+        }
+      });
+    }
+
+    let C0 = new THREE.Vector3(), L0 = 2.5, len1 = 0.7, cz = [0, 0, 0], tubeR = 0.08, ready = false;
+    const shellMeshes = [], shellMats = [];
+
+    /* upper payload: the 915 MHz dipole, the LoRa quarter-wave and the M9N
+       (model-space centres from the CAD) */
+    const DIPOLE = new THREE.Vector3(-0.025, -0.013, 1.163);
+    const CALLOUTS = [
+      { at: DIPOLE, dx: -78, dy: -96, align: "end" },
+      { at: new THREE.Vector3(0.014, -0.016, 1.093), dx: 0, dy: 104, align: "middle" },
+      { at: new THREE.Vector3(-0.018, -0.021, 1.037), dx: 78, dy: -96, align: "start" },
+    ];
+
+    /* the dipole's 3D radiation pattern: the same revolved solid as
+       models/rfd900x-915mhz-dipole-pattern.step (mm, axis +Z, feed at origin) */
+    const patMat = new THREE.MeshStandardMaterial({
+      color: 0x2a78d6, roughness: 0.55, metalness: 0.0,
+      transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const patLineMat = new THREE.LineBasicMaterial({ color: 0x1d5fae, transparent: true, opacity: 0 });
+    const pattern = new THREE.Group();
+    pattern.visible = false;
+    pattern.position.copy(DIPOLE);
+    secs[0].add(pattern);
+    new STLLoader().load("models/rfd900x-915mhz-dipole-pattern.stl", (geo) => {
+      geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, patMat);
+      m.scale.setScalar(0.001);
+      m.renderOrder = 5;
+      pattern.add(m);
+      /* meridians and the -3 dB parallels, from the same dipole profile */
+      const rOf = (th) => {
+        const s = Math.sin(th);
+        const db = 20 * Math.log10(Math.abs(Math.cos(Math.PI / 2 * Math.cos(th)) / s));
+        return 0.15 * (Math.max(db, -30) + 30) / 30;
+      };
+      for (let k = 0; k < 8; k++) {
+        const az = (k / 8) * Math.PI * 2, pts = [];
+        for (let d = 3; d <= 177; d += 3) {
+          const th = THREE.MathUtils.degToRad(d), r = rOf(th);
+          pts.push(new THREE.Vector3(r * Math.sin(th) * Math.cos(az), r * Math.sin(th) * Math.sin(az), r * Math.cos(th)));
+        }
+        pattern.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), patLineMat));
+      }
+      for (const deg of [51, 90, 129]) {
+        const th = THREE.MathUtils.degToRad(deg), r = rOf(th), pts = [];
+        for (let k = 0; k <= 64; k++) {
+          const az = (k / 64) * Math.PI * 2;
+          pts.push(new THREE.Vector3(r * Math.sin(th) * Math.cos(az), r * Math.sin(th) * Math.sin(az), r * Math.cos(th)));
+        }
+        pattern.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), patLineMat));
+      }
+    });
+    const payBox = new THREE.Box3();
+    let payCz = 0, payLen = 0.5;
+
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    Promise.all([1, 2, 3].map((i) => new Promise((res, rej) =>
+      loader.load(`models/rocket_v2_s${i}.glb`, res, undefined, rej)
+    ))).then((gltfs) => {
+      const HEX_MM = 0.17;    // one texture tile covers 170 mm of surface
+      const vtx = new THREE.Vector3();
+      const boxes = gltfs.map((g, i) => {
+        restyle(g.scene);
+        g.scene.updateMatrixWorld(true);
+        /* the CAD mesh has no UVs: wrap the carbon weave cylindrically */
+        g.scene.traverse((o) => {
+          if (!o.isMesh) return;
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          if (i === 0 && mats.some((m) => m && kraftMats.has(m.uuid))) {
+            /* the coupler's aft disc face reads as plywood: split the flat
+               axial faces near the aft plane out to pine */
+            const idx = o.geometry.index;
+            const pos = o.geometry.attributes.position;
+            const keep = [], disc = [];
+            const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
+            const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nrm = new THREE.Vector3();
+            for (let tI = 0; tI < idx.count / 3; tI++) {
+              const a = idx.getX(tI * 3), b = idx.getX(tI * 3 + 1), cc = idx.getX(tI * 3 + 2);
+              A.fromBufferAttribute(pos, a).applyMatrix4(o.matrixWorld);
+              B.fromBufferAttribute(pos, b).applyMatrix4(o.matrixWorld);
+              C.fromBufferAttribute(pos, cc).applyMatrix4(o.matrixWorld);
+              nrm.crossVectors(e1.subVectors(B, A), e2.subVectors(C, A)).normalize();
+              const zMean = (A.z + B.z + C.z) / 3;
+              if (Math.abs(nrm.z) > 0.6 && zMean < 0.85) disc.push(a, b, cc);
+              else keep.push(a, b, cc);
+            }
+            if (disc.length) {
+              const dg = new THREE.BufferGeometry();
+              dg.attributes = o.geometry.attributes;
+              dg.setIndex(disc);
+              const dm = o.clone();
+              dm.geometry = dg;
+              dm.material = pineMat;
+              o.parent.add(dm);
+              const kg = new THREE.BufferGeometry();
+              kg.attributes = o.geometry.attributes;
+              kg.setIndex(keep);
+              o.geometry = kg;
+            }
+            return;
+          }
+          if (!mats.some((m) => m && carbonMats.has(m.uuid))) return;
+          const pos = o.geometry.attributes.position;
+          const uv = new Float32Array(pos.count * 2);
+          for (let k = 0; k < pos.count; k++) {
+            vtx.fromBufferAttribute(pos, k).applyMatrix4(o.matrixWorld);
+            const ang = Math.atan2(vtx.x, vtx.y);
+            uv[k * 2] = (ang * 0.0785) / HEX_MM;
+            uv[k * 2 + 1] = vtx.z / HEX_MM;
+          }
+          o.geometry.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+
+          /* peel fins (twill), the aft retainer (black metal) and the tube
+             interiors (Blue Tube) out of the merged airframe mesh by shape */
+          {
+            const idx = o.geometry.index;
+            const triCount = idx.count / 3;
+            const finI = [], retI = [], tubeI = [], intI = [], coneI = [], pcbI = [];
+            const pA = new THREE.Vector3(), pB = new THREE.Vector3(), pC = new THREE.Vector3();
+            for (let tI = 0; tI < triCount; tI++) {
+              const a = idx.getX(tI * 3), b = idx.getX(tI * 3 + 1), cc = idx.getX(tI * 3 + 2);
+              pA.fromBufferAttribute(pos, a).applyMatrix4(o.matrixWorld);
+              pB.fromBufferAttribute(pos, b).applyMatrix4(o.matrixWorld);
+              pC.fromBufferAttribute(pos, cc).applyMatrix4(o.matrixWorld);
+              const rMax = Math.max(Math.hypot(pA.x, pA.y), Math.hypot(pB.x, pB.y), Math.hypot(pC.x, pC.y));
+              const zMax = Math.max(pA.z, pB.z, pC.z);
+              const zMean = (pA.z + pB.z + pC.z) / 3;
+              if (i === 0 && rMax < 0.042 &&
+                  (zMean < 0.912 || (zMean > 0.995 && zMean < 1.07))) pcbI.push(a, b, cc);  // boards, buttons, SD, camera, M9N GPS
+              else if (i === 0 && zMean > 1.02) coneI.push(a, b, cc);      // the cone itself: flat black
+              else if (i === 2 && zMax < -1.058) retI.push(a, b, cc);
+              else if (i === 2 && rMax > 0.075) finI.push(a, b, cc);
+              else if (rMax < 0.0505) intI.push(a, b, cc);
+              else tubeI.push(a, b, cc);
+            }
+            if (finI.length || retI.length || intI.length || coneI.length || pcbI.length) {
+              const mk = (indices, mat, planarUv) => {
+                if (!indices.length) return;
+                const geo = new THREE.BufferGeometry();
+                geo.attributes = o.geometry.attributes;
+                geo.setIndex(indices);
+                if (planarUv) {
+                  const u2 = new Float32Array(pos.count * 2);
+                  for (let k = 0; k < pos.count; k++) {
+                    vtx.fromBufferAttribute(pos, k).applyMatrix4(o.matrixWorld);
+                    u2[k * 2] = vtx.z / 0.1;
+                    u2[k * 2 + 1] = Math.hypot(vtx.x, vtx.y) / 0.1;
+                  }
+                  geo.attributes = Object.assign({}, o.geometry.attributes, {
+                    uv: new THREE.BufferAttribute(u2, 2),
+                  });
+                }
+                const m2 = o.clone();
+                m2.geometry = geo;
+                m2.material = mat;
+                o.parent.add(m2);
+              };
+              mk(finI, twillMat, true);
+              mk(retI, retainerMat, false);
+              mk(intI, blueTubeMat, false);
+              mk(coneI, noseMat, false);
+              mk(pcbI, pcbMat, false);
+              o.geometry = (() => {
+                const geo = new THREE.BufferGeometry();
+                geo.attributes = o.geometry.attributes;
+                geo.setIndex(tubeI);
+                return geo;
+              })();
+            }
+          }
+        });
+        /* measure in model space BEFORE parenting under the rotated rig */
+        const b = new THREE.Box3().setFromObject(g.scene);
+        secs[i].add(g.scene);
+        return b;
+      });
+      /* the nose cone + outer tube + coupler of section 1 fade away to
+         reveal the payload: give those meshes their own transparent mats */
+      gltfs[0].scene.traverse((o) => {
+        if (!o.isMesh) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        const isShell = mats.some((m) => m && (m === noseMat || m === pineMat ||
+          m === blueTubeMat || carbonMats.has(m.uuid) || kraftMats.has(m.uuid)));
+        if (!isShell) return;
+        const cl = (Array.isArray(o.material) ? o.material[0] : o.material).clone();
+        cl.transparent = true;
+        o.material = cl;
+        shellMeshes.push(o);
+        shellMats.push(cl);
+      });
+
+      /* the payload alone: everything in section 1 that stays after the fade */
+      const s1 = gltfs[0].scene, s1Parent = s1.parent;
+      s1Parent.remove(s1);
+      s1.updateMatrixWorld(true);
+      const shellSet = new Set(shellMeshes);
+      s1.traverse((o) => {
+        if (o.isMesh && !shellSet.has(o)) payBox.expandByObject(o);
+      });
+      s1Parent.add(s1);
+      payCz = (payBox.min.z + payBox.max.z) / 2;
+      payLen = payBox.max.z - payBox.min.z;
+
+      len1 = boxes[0].max.z - boxes[0].min.z;
+      const all = boxes[0].clone().union(boxes[1]).union(boxes[2]);
+      all.getCenter(C0);
+      L0 = all.max.z - all.min.z;
+      tubeR = Math.min(all.max.x - all.min.x, all.max.y - all.min.y) / 2 * 0.55;
+      cz = boxes.map((b) => (b.min.z + b.max.z) / 2);
+      ready = true;
+      layout();
+    }).catch((e) => console.error("rocket load failed", e));
+
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    const ease = (t) => t * t * (3 - 2 * t);
+
+    function scrollP() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      return max > 0 ? clamp01(window.scrollY / max) : 0;
+    }
+
+    let baseDist = 6;
+    function layout() {
+      const w = stage.clientWidth, h = stage.clientHeight;
+      lastBh = 0;
+      telem.width = w * 2;
+      telem.height = 300;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      const hFov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
+      baseDist = ((L0 + 2 * GAP) / 2) / Math.tan(hFov / 2) / 0.88;
+    }
+
+    let smoothP = scrollP();
+    let lastBh = 0;
+    let lastFc = -1;
+    let lastTick = -1;
+    let shownStep = 0, lastStepAt = 0;
+    const histA = [], histV = [], histR = [];
+    const telem = document.querySelector("canvas.telem");
+    const tg = telem.getContext("2d");
+    const v = new THREE.Vector3();
+    const dotEls = [...document.querySelectorAll(".dots button")];
+    dotEls.forEach((b) => b.addEventListener("click", () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo({ top: parseFloat(b.dataset.p) * max, behavior: "smooth" });
+    }));
+    const clock = new THREE.Clock();
+
+    function update() {
+      const time = clock.getElapsedTime();
+      let target = scrollP();
+      /* inside the feed the scroll magnetises to the nearest frame step */
+      if (target > SEP0 && target < SEP1) {
+        const u = (target - SEP0) / (SEP1 - SEP0);
+        target = SEP0 + (Math.round(u * (TIP_N - 1)) / (TIP_N - 1)) * (SEP1 - SEP0);
+      }
+      smoothP += (target - smoothP) * SMOOTH;
+      if (Math.abs(target - smoothP) < 0.0004) smoothP = target;
+
+      const act = smoothP < 0.15 ? 0 : smoothP < 0.34 ? 1 : smoothP < 0.5 ? 2 : smoothP < 0.68 ? 3 : 4;
+      dotEls.forEach((b, i) => b.classList.toggle("on", i === act));
+
+      if (!ready) {
+        renderer.render(scene, camera);
+        return;
+      }
+
+      const t = ease(clamp01((smoothP - HERO_END) / (SPLIT_END - HERO_END)));
+      const zoomT = easeSoft(clamp01((smoothP - ZOOM0) / (ZOOM1 - ZOOM0)));
+      const revT = easeSoft(clamp01((smoothP - REV0) / (REV1 - REV0)));
+      const povT = easeSoft(clamp01((smoothP - POV0) / (POV1 - POV0)));
+      const sepT = easeSoft(clamp01((smoothP - SEP0) / (SEP1 - SEP0)));
+      const camOn = povT > 0.985;           // fully inside the onboard camera
+      if (camOn && lastFc < 0) {
+        histA.length = histV.length = histR.length = 0;
+        lastFc = 0;
+      }
+      if (!camOn) lastFc = -1;
+      /* the video chases the scroll one frame at a time at 6 fps, so a fast
+         scroll never strobes and every frame holds its full display time */
+      const qTarget = Math.min(TIP_N - 1, Math.floor(sepT * (TIP_N - 1)));
+      if (!camOn) {
+        shownStep = 0;
+        lastStepAt = time;
+      } else if (shownStep !== qTarget && time - lastStepAt >= 1 / 30) {
+        shownStep += Math.sign(qTarget - shownStep);
+        lastStepAt = time;
+      }
+      const qStep = shownStep;
+      const sepQ = qStep / (TIP_N - 1);
+      /* the HUD clock rides the raw scroll, racing ahead during fast seeks */
+      const fc = camOn ? sepT * FEED_SPAN * ((TIP_N - 1) / 147) : 0;
+      const renderNow = !camOn || qStep !== lastTick;
+      const groundOn = false;   // Earth-captured tilt frames carry the view
+
+      /* split, reassemble into the POV, then slow-motion re-separation */
+      const mainGap = GAP * t * (1 - povT);
+      const kick = 1 - Math.pow(Math.max(0, 1 - qStep / 126), 2);
+      const gap = mainGap + SEP_GAP * kick;
+      secs[1].position.z = -gap;
+      secs[2].position.z = -gap * 2;
+      asm.position.set(C0.z - mainGap, -C0.y, -C0.x);
+      const tiltK = 1 - zoomT;               // straighten out for the close-up
+      rocket.rotation.y = -0.22 * t * tiltK;
+      rocket.rotation.x = 0.1 * t * tiltK;
+      /* pod to the top, one slow turn during the reveal, lower stages spin
+         gently during the filmed separation */
+      secs[0].rotation.z = BUMP_ROLL * zoomT + Math.PI * 3.5 * revT;
+
+      /* once the nose has rolled a further 180 deg, the dipole's radiation
+         pattern blooms around the antenna; it clears again before the
+         payload settles into its framed view */
+      const rolled = easeSoft(clamp01((revT - 1 / 3.5) / 0.12));
+      const patT = rolled * (1 - easeSoft(clamp01((revT - 0.7) / 0.12)));
+      pattern.visible = patT > 0.01;
+      patMat.opacity = 0.22 * patT;
+      patLineMat.opacity = 0.6 * patT;
+      pattern.scale.setScalar(0.85 + 0.15 * rolled);
+      secs[1].rotation.z = 1.1 * sepQ;
+      secs[2].rotation.z = 1.9 * sepQ;
+      /* the backdrop frames pan the camera up 0..80 deg; the separated stack
+         keeps hanging toward the real nadir, so it pivots down-frame about
+         the onboard camera by exactly the same angle */
+      /* constant tilt rate: straight down, through the horizon, to nearly
+         straight up at a steady altitude, matching the backdrop frames */
+      const panDeg = 175 * qStep / (TIP_N - 1);
+      const pan = panDeg * Math.PI / 180;
+      const cosA = Math.cos(pan), sinA = Math.sin(pan);
+      const CY = 0.012, CZ = 0.655;          // the onboard camera, model space
+      const panY = (y, z) => CY + (y - CY) * cosA + (z - CZ) * sinA;
+      const panZ = (y, z) => CZ - (y - CY) * sinA + (z - CZ) * cosA;
+      secs[1].rotation.x = -pan;
+      secs[1].position.set(0, panY(0, -gap), panZ(0, -gap));
+      secs[2].rotation.x = -pan;
+      secs[2].position.set(0, panY(0, -gap * 2), panZ(0, -gap * 2));
+
+      /* drogue rides in the bay, then is pulled out, still a packed ball */
+      chute.visible = camOn;
+      const outT = easeSoft(clamp01(qStep / 36));
+      const rideZ = 0.32 - gap;
+      const outZ = (0.64 - gap * 0.6) + 0.02;  // the ball rides mid-cord
+      const ballY = 0.004 * outT, ballZ = rideZ + (outZ - rideZ) * outT;
+      chute.position.set(0.01 * outT, panY(ballY, ballZ), panZ(ballY, ballZ));
+
+      /* the charge flash blooms and fades over the first few frames */
+      const puffT = camOn && qStep > 0 ? clamp01(1 - qStep / 24) : 0;
+      puff.visible = puffT > 0;
+      if (puff.visible) {
+        const pz = 0.64 - gap * 0.5;
+        puff.position.set(0, panY(0, pz), panZ(0, pz));
+        const ps = 0.15 + (1 - puffT) * 0.6;
+        puff.scale.set(ps, ps, 1);
+        puff.material.opacity = puffT * 0.85;
+      }
+
+      /* the shock cord pays out past the lens as the stage falls away */
+      rope.visible = camOn && qStep > 0;
+      if (rope.visible) {
+        const bx = chute.position.x, by = chute.position.y, bz = chute.position.z;
+        /* the departing stage's mouth, carried through the same pan */
+        const my = panY(0, 0.64 - gap);
+        const mz = panZ(0, 0.64 - gap);
+        /* past 40 deg of pan the cord stops chasing the lens and swings
+           out of frame with the rest of the hanging stack */
+        const rel = Math.max(0, pan - 40 * Math.PI / 180);
+        const cR = Math.cos(rel), sR = Math.sin(rel);
+        const relY = (y, z) => CY + (y - CY) * cR + (z - CZ) * sR;
+        const relZ = (y, z) => CZ - (y - CY) * sR + (z - CZ) * cR;
+        const a0y = relY(-0.060, 0.630), a0z = relZ(-0.060, 0.630);
+        const a1y = relY(-0.042, 0.614), a1z = relZ(-0.042, 0.614);
+        const pts = [
+          new THREE.Vector3(0.010, a0y, a0z),
+          new THREE.Vector3(0.006, a1y, a1z),
+          new THREE.Vector3(0.006 + (bx - 0.006) * 0.45, a1y + (by - a1y) * 0.45 - 0.012, a1z + (bz - a1z) * 0.45),
+          new THREE.Vector3(bx + 0.002, by - 0.003, bz),
+          new THREE.Vector3(bx * 0.5 + 0.002, (by + my) * 0.5 - 0.012, (bz + mz) * 0.5),
+          new THREE.Vector3(0.004, my, mz),
+        ];
+        rope.geometry.dispose();
+        rope.geometry = ropeGeo(pts);
+      }
+
+      /* nose cone + outer tube fade away to reveal the payload */
+      const fade = clamp01(revT * 1.7);
+      for (let k = 0; k < shellMats.length; k++) {
+        shellMats[k].opacity = 1 - fade;
+        shellMeshes[k].visible = fade < 0.98;
+      }
+
+      /* camera: wide -> nose close-up -> onboard camera POV (locked) */
+      const noseX = asm.position.x - cz[0];
+      const payX = asm.position.x - payCz;
+      const tx = (noseX + (payX - noseX) * revT) * zoomT;
+      const vHalf = Math.tan(THREE.MathUtils.degToRad(32) / 2);
+      const hFov2 = 2 * Math.atan(vHalf * camera.aspect);
+      const dWide = baseDist * (0.82 + 0.18 * t);
+      const dNose = (len1 / 2) / Math.tan(hFov2 / 2) / 0.72;
+      /* revealed payload framed like the Figma frame (1722x894): it spans
+         92% of the width, its axis sitting 2.7% of the height below centre */
+      const dPay = (payLen / 2) / Math.tan(hFov2 / 2) / 0.92;
+      let dist = dWide + (dNose - dWide) * zoomT;
+      dist += (dPay - dist) * revT;
+      const yOff = 0.027 * 2 * dPay * vHalf * revT;
+      const camY = 0.045 * zoomT * (1 - revT) + yOff;
+      const povX = asm.position.x - 0.655, povY = 0.012, povZ = 0.015;
+      camera.position.set(
+        tx + (povX - tx) * povT,
+        camY + (povY - camY) * povT,
+        dist + (povZ - dist) * povT
+      );
+      camera.lookAt(
+        tx + (povX + 1 - tx) * povT,
+        yOff + (povY - yOff) * povT,
+        povZ * povT
+      );
+      camera.fov = 32 + 30 * povT;
+      camera.updateProjectionMatrix();
+
+      /* ground at the sim's exact AGL altitude and hang angle */
+      scene.background = groundOn ? feedBg : null;
+      scene.fog = groundOn ? feedFog : null;
+      ground.visible = groundOn;
+      sky.visible = groundOn;
+      if (groundOn) {
+        const mQ = EJECT_T + sepQ * FEED_SPAN;
+        const th = (90 - fdAt(fd.zen, mQ)) * Math.PI / 180;
+        const altS = Math.max(50, fdAt(fd.alt, mQ) * 0.3048) * SCN;
+        const dLat = (fdAt(fd.latd, mQ) - fdAt(fd.latd, EJECT_T)) * 0.3048 * SCN;
+        groundRig.position.set(povX, povY, povZ);
+        groundRig.rotation.z = -th;          // true vertical swings screen-down
+        ground.position.set(altS, 0, dLat);  // image centre = nadir at real AGL
+      }
+
+      /* the bore is dark; daylight comes up as the joint opens */
+      renderer.toneMappingExposure = 0.75 - 0.56 * povT + 0.22 * sepQ;
+      sepLight.intensity = 2.4 * sepQ;
+      cloudsEl.style.opacity = camOn && !groundOn ? "1" : "0";
+
+      /* tip-over sequence: blend between neighbouring frames, the incoming
+         wider frame settling from a slight overscale so the pull-back reads
+         as one continuous motion */
+      if (renderNow && !groundOn && qStep !== tipI) {
+        tipI = qStep;
+        tipA.style.backgroundImage = `url(${tipSrc(qStep)})`;
+        tipB.style.opacity = "0";
+      }
+
+      /* lattice-style telemetry strip, time-driven, camera view only */
+      telem.style.opacity = camOn ? "1" : "0";
+      if (camOn) {
+        const mT = EJECT_T + fc;
+        const alt = fd ? fdAt(fd.alt, mT) : Math.max(0, 1420 - 46 * fc - 2.45 * fc * fc);
+        const vel = fd ? fdAt(fd.vel, mT) : -(46 + 4.9 * fc);
+        const rr = fd ? fdAt(fd.zen, mT) : 38 + 95 * sepT;
+        if (fc > lastFc + 0.02 || histA.length === 0) {
+          lastFc = fc;
+          histA.push(alt); histV.push(vel); histR.push(rr);
+          if (histA.length > 180) { histA.shift(); histV.shift(); histR.shift(); }
+        }
+
+        const W = telem.width / 2, H = 150;
+        tg.setTransform(2, 0, 0, 2, 0, 0);
+        tg.clearRect(0, 0, W, H);
+        tg.font = '600 9px "SF Mono", Menlo, monospace';
+
+        const panel = (x, y, w2, h2) => {
+          tg.fillStyle = "rgba(8,10,9,0.55)";
+          tg.fillRect(x, y, w2, h2);
+          tg.strokeStyle = "rgba(255,255,255,0.28)";
+          tg.lineWidth = 1;
+          tg.strokeRect(x + 0.5, y + 0.5, w2 - 1, h2 - 1);
+        };
+        const label = (s, x, y, dim) => {
+          tg.fillStyle = dim ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.88)";
+          tg.fillText(s, x, y);
+        };
+        const graph = (x, y, w2, h2, data, name, val) => {
+          panel(x, y, w2, h2);
+          label(name, x + 6, y + 13, true);
+          label(val, x + w2 - 6 - tg.measureText(val).width, y + 13, false);
+          if (data.length > 1) {
+            let mn = Infinity, mx = -Infinity;
+            for (const d of data) { if (d < mn) mn = d; if (d > mx) mx = d; }
+            const rg = mx - mn || 1;
+            tg.strokeStyle = "rgba(255,255,255,0.85)";
+            tg.beginPath();
+            for (let k = 0; k < data.length; k++) {
+              const gx = x + 6 + (k / 179) * (w2 - 12);
+              const gy = y + h2 - 6 - ((data[k] - mn) / rg) * (h2 - 26);
+              k ? tg.lineTo(gx, gy) : tg.moveTo(gx, gy);
+            }
+            tg.stroke();
+          }
+        };
+
+        const m = 10, ph = 70, py = H - ph - 10;
+        panel(m, py, 148, ph);
+        label("RAVEN L-1420 • CAM 01", m + 7, py + 14, false);
+        label("T+ " + (EJECT_T + fc).toFixed(1).padStart(5, "0") + " S", m + 7, py + 29, false);
+        label("GS-1  640×480  918 MHZ", m + 7, py + 44, true);
+        const sep = qStep > 0;
+        tg.fillStyle = sep ? "rgba(140,255,170,0.9)" : "rgba(255,255,255,0.5)";
+        tg.fillText("SEP: " + (sep ? "CONFIRMED" : "ARMED"), m + 7, py + 59);
+        graph(m + 154, py, 92, ph, histA, "ALT FT", alt.toFixed(0));
+        graph(m + 252, py, 92, ph, histV, "VEL MPH", vel.toFixed(1));
+        graph(m + 350, py, 92, ph, histR, "ZEN °", rr.toFixed(1));
+      }
+
+      const coT = easeSoft(clamp01((revT - 0.82) / 0.18)) * (1 - easeSoft(clamp01(povT / 0.15)));
+      coG.style.opacity = coT.toFixed(3);
+      if (coT > 0.01) {
+        rocket.updateMatrixWorld(true);
+        camera.updateMatrixWorld();
+        const cw = stage.clientWidth, ch = stage.clientHeight;
+        CALLOUTS.forEach((c, k) => {
+          v.copy(c.at).applyMatrix4(secs[0].matrixWorld).project(camera);
+          const ax = (v.x * 0.5 + 0.5) * cw, ay = (-v.y * 0.5 + 0.5) * ch;
+          /* keep each label fully on screen: shift its elbow inward when the
+             leader would push the text past an edge */
+          const lw = coEls[k].offsetWidth;
+          let ex = ax + c.dx;
+          const ey = ay + c.dy;
+          if (c.align === "end") ex = Math.max(ex, lw + 18);
+          else if (c.align === "start") ex = Math.min(ex, cw - lw - 60);
+          const pts = c.align === "middle"
+            ? `${ax},${ay} ${ax},${ey}`
+            : `${ax},${ay} ${ax},${ey} ${ex},${ey}`;
+          coLines[k].pl.setAttribute("points", pts);
+          coLines[k].dot.setAttribute("cx", ax.toFixed(1));
+          coLines[k].dot.setAttribute("cy", ay.toFixed(1));
+          const el = coEls[k];
+          el.style.opacity = coT.toFixed(3);
+          if (c.align === "end") {
+            el.style.left = (ex - 6) + "px"; el.style.top = ey + "px";
+            el.style.transform = "translate(-100%, -50%)"; el.style.textAlign = "right";
+          } else if (c.align === "start") {
+            el.style.left = (ex + 6) + "px"; el.style.top = ey + "px";
+            el.style.transform = "translate(0, -50%)"; el.style.textAlign = "left";
+          } else {
+            el.style.left = ax + "px"; el.style.top = (ey + 6) + "px";
+            el.style.transform = "translate(-50%, 0)"; el.style.textAlign = "center";
+          }
+        });
+      } else {
+        coEls.forEach((el) => { el.style.opacity = "0"; });
+      }
+
+      hint.style.opacity = String(smoothP < 0.01 ? 1 : 0);
+
+      /* labels under each section */
+      const w = stage.clientWidth, h = stage.clientHeight;
+      const offs = [0, -gap, -gap * 2];
+      secEls.forEach((el, i) => {
+        v.set(asm.position.x - (cz[i] + offs[i]), -tubeR * 2.4, 0)
+          .applyQuaternion(rocket.quaternion);
+        v.project(camera);
+        el.style.left = ((v.x * 0.5 + 0.5) * w) + "px";
+        el.style.top = ((-v.y * 0.5 + 0.5) * h) + "px";
+        el.style.opacity = clamp01((t - 0.35 - i * 0.18) / 0.2) * (1 - clamp01(zoomT * 2));
+      });
+
+      if (renderNow) {
+        /* 480p feed while the onboard camera is live */
+        const prFull = Math.min(window.devicePixelRatio, 2);
+        const bhFull = Math.round(h * prFull);
+        const bh = camOn ? 480 : bhFull;
+        if (bh !== lastBh) {
+          lastBh = bh;
+          renderer.setPixelRatio(1);
+          renderer.setSize(Math.round(bh * (w / h)), bh, false);
+        }
+        renderer.render(scene, camera);
+        lastTick = qStep;
+      }
+    }
+
+    function tick() {
+      update();
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", layout);
+    layout();
+    tick();
+  </script>
+  <script src="glitch.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+.DS_Store
+*.blend1
+# Blender source for the renders (74 MB); kept locally, not loaded by the site
+tools/payload.blend
