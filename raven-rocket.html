@@ -62,13 +62,13 @@
       opacity: 0;
       overflow: hidden;
     }
-    .clouds div {
+    .clouds canvas {
       position: absolute;
       inset: 0;
-      background-size: cover;
-      background-position: center;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       image-rendering: pixelated;
-      transform-origin: center;
     }
 
     canvas.telem {
@@ -244,7 +244,7 @@
 <body>
   <main class="track">
     <div class="stage" data-glitch>
-      <div class="clouds" aria-hidden="true"><div></div><div></div></div>
+      <div class="clouds" aria-hidden="true"><canvas width="640" height="480"></canvas></div>
       <canvas class="gl" aria-label="Raven L-1420 full rocket, splitting into sections"></canvas>
       <canvas class="telem" aria-hidden="true"></canvas>
 
@@ -398,13 +398,19 @@
       t.colorSpace = THREE.SRGBColorSpace;
       return t;
     })();
-    /* tip-over backdrop: nine 144p black-and-white frames, straight down to
-       the horizon, crossfaded with the scroll as the rocket noses over */
+    /* onboard camera backdrop: 323 frames at 480p, one steady tilt from
+       straight down, through the horizon, to nearly straight up */
     const cloudsEl = document.querySelector(".clouds");
     const TIP_N = 323;
     const tipSrc = (i) => `images/fr${i}.jpg`;
-    for (let i = 0; i < TIP_N; i++) new Image().src = tipSrc(i);
-    const tipA = cloudsEl.children[0], tipB = cloudsEl.children[1];
+    /* keep every frame decoded in memory so 30 fps swaps never wait on a load */
+    const tipImgs = Array.from({ length: TIP_N }, (_, i) => {
+      const im = new Image();
+      im.src = tipSrc(i);
+      im.decode().catch(() => {});
+      return im;
+    });
+    const feed = cloudsEl.querySelector("canvas").getContext("2d");
     /* OpenRocket export drives the filmed separation: ejection at T+24 s */
     const EJECT_T = 24, FEED_SPAN = 5;
     let fd = null;
@@ -997,27 +1003,30 @@
       const zoomT = easeSoft(clamp01((smoothP - ZOOM0) / (ZOOM1 - ZOOM0)));
       const revT = easeSoft(clamp01((smoothP - REV0) / (REV1 - REV0)));
       const povT = easeSoft(clamp01((smoothP - POV0) / (POV1 - POV0)));
-      const sepT = easeSoft(clamp01((smoothP - SEP0) / (SEP1 - SEP0)));
+      /* linear: equal scroll = equal frames, so the pan rate stays constant */
+      const sepT = clamp01((smoothP - SEP0) / (SEP1 - SEP0));
       const camOn = povT > 0.985;           // fully inside the onboard camera
       if (camOn && lastFc < 0) {
         histA.length = histV.length = histR.length = 0;
         lastFc = 0;
       }
       if (!camOn) lastFc = -1;
-      /* the video chases the scroll one frame at a time at 6 fps, so a fast
-         scroll never strobes and every frame holds its full display time */
-      const qTarget = Math.min(TIP_N - 1, Math.floor(sepT * (TIP_N - 1)));
+      /* the video chases the scroll position one frame at a time at a steady
+         30 fps, so a fast scroll never strobes or eases; the 4 ms allowance
+         keeps 60/120 Hz displays on an even every-2nd/4th-refresh cadence */
+      const scrollSep = clamp01((target - SEP0) / (SEP1 - SEP0));
+      const qTarget = Math.min(TIP_N - 1, Math.round(scrollSep * (TIP_N - 1)));
       if (!camOn) {
         shownStep = 0;
         lastStepAt = time;
-      } else if (shownStep !== qTarget && time - lastStepAt >= 1 / 30) {
+      } else if (shownStep !== qTarget && time - lastStepAt >= 1 / 30 - 1 / 240) {
         shownStep += Math.sign(qTarget - shownStep);
         lastStepAt = time;
       }
       const qStep = shownStep;
       const sepQ = qStep / (TIP_N - 1);
       /* the HUD clock rides the raw scroll, racing ahead during fast seeks */
-      const fc = camOn ? sepT * FEED_SPAN * ((TIP_N - 1) / 147) : 0;
+      const fc = camOn ? sepT * (TIP_N - 1) / 30 : 0;   // frames are 1/30 s apart
       const renderNow = !camOn || qStep !== lastTick;
       const groundOn = false;   // Earth-captured tilt frames carry the view
 
@@ -1159,18 +1168,20 @@
         ground.position.set(altS, 0, dLat);  // image centre = nadir at real AGL
       }
 
-      /* the bore is dark; daylight comes up as the joint opens */
+      /* the bore is dark; the filmed separation is black-and-white */
       renderer.toneMappingExposure = 0.75 - 0.56 * povT + 0.22 * sepQ;
       sepLight.intensity = 2.4 * sepQ;
+      const film = camOn ? "grayscale(1) contrast(1.18)" : "";
+      canvas.style.filter = film;
+      cloudsEl.style.filter = film;
       cloudsEl.style.opacity = camOn && !groundOn ? "1" : "0";
 
-      /* tip-over sequence: blend between neighbouring frames, the incoming
-         wider frame settling from a slight overscale so the pull-back reads
-         as one continuous motion */
-      if (renderNow && !groundOn && qStep !== tipI) {
+      /* paint the already-decoded frame straight onto the feed canvas: no
+         fetch and no decode, so every step lands on its refresh */
+      const tipImg = tipImgs[qStep];
+      if (!groundOn && qStep !== tipI && tipImg.complete && tipImg.naturalWidth) {
         tipI = qStep;
-        tipA.style.backgroundImage = `url(${tipSrc(qStep)})`;
-        tipB.style.opacity = "0";
+        feed.drawImage(tipImg, 0, 0, 640, 480);
       }
 
       /* lattice-style telemetry strip, time-driven, camera view only */
@@ -1227,7 +1238,7 @@
         label("T+ " + (EJECT_T + fc).toFixed(1).padStart(5, "0") + " S", m + 7, py + 29, false);
         label("GS-1  640×480  918 MHZ", m + 7, py + 44, true);
         const sep = qStep > 0;
-        tg.fillStyle = sep ? "rgba(140,255,170,0.9)" : "rgba(255,255,255,0.5)";
+        tg.fillStyle = sep ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)";   // monochrome feed
         tg.fillText("SEP: " + (sep ? "CONFIRMED" : "ARMED"), m + 7, py + 59);
         graph(m + 154, py, 92, ph, histA, "ALT FT", alt.toFixed(0));
         graph(m + 252, py, 92, ph, histV, "VEL MPH", vel.toFixed(1));
