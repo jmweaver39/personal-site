@@ -404,9 +404,12 @@
     }
 
     // One canvas pixel per speckle, scaled up crisply by CSS. The canvas holds
-    // two copies of a window-wide period side by side.
+    // two copies of a window-wide period side by side. Speckles cover a whole
+    // number of screen pixels and the canvas only moves in whole screen pixels;
+    // otherwise the browser resamples them every frame and the field flickers.
     function paintBackground() {
-      const cell = SPECK * u;
+      const dpr = devicePixelRatio || 1;
+      const cell = Math.max(1, Math.round(SPECK * u * dpr)) / dpr;
       const cols = Math.ceil(innerWidth / cell);
       const rows = Math.ceil(innerHeight / cell);
       period = cols * cell;
@@ -439,8 +442,9 @@
     }
 
     function drift(now) {
+      const dpr = devicePixelRatio || 1;
       const offset = reduce.matches ? 0 : ((now * DRIFT * u) / 1000) % period;
-      bgCanvas.style.transform = `translateX(${(offset - period).toFixed(2)}px)`;
+      bgCanvas.style.transform = `translateX(${Math.round((offset - period) * dpr) / dpr}px)`;
     }
 
     // Playback. The page is a pure function of `t`: the name types once
@@ -543,6 +547,18 @@
       clearTimeout(repaintTimer);
       repaintTimer = setTimeout(paintBackground, 150);
     });
+
+    // Moving to a screen with a different pixel density needs a fresh pattern
+    (function watchDensity() {
+      matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener(
+        "change",
+        () => {
+          paintBackground();
+          watchDensity();
+        },
+        { once: true }
+      );
+    })();
 
     measure();
     paintBackground();
