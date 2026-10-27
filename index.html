@@ -373,6 +373,8 @@
     // `period` px and can drift right forever.
     const bgCanvas = document.querySelector(".bg canvas");
     const SPECK = 2.25;  // Figma px per speckle
+    const CONTRAST = 0.5; // speckle brightness against black, relative to Figma's #808080
+    const GREY = Math.round(0x80 * CONTRAST);
     const DRIFT = 90;    // Figma px per second
     const CLOUD = 420;   // Figma px across one cloud of speckles
     let period = 1;      // CSS px
@@ -425,7 +427,7 @@
           const density = 0.006 + 0.34 * smooth(0.5, 0.85, n) ** 1.5;
           if (hash(x, y, 99) >= density) continue;
           for (const at of [(y * cols * 2 + x) * 4, (y * cols * 2 + x + cols) * 4]) {
-            data[at] = data[at + 1] = data[at + 2] = 0x80;
+            data[at] = data[at + 1] = data[at + 2] = GREY;
             data[at + 3] = 0xff;
           }
         }
