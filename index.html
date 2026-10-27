@@ -222,7 +222,7 @@
     const HOLD_TEXT = 2000;    // text sits still before collapsing
     const STAGGER = 70;        // between pairs of letters starting to slide
     const TRAVEL = 420;        // one letter's slide into the square
-    const POP = 180;           // square's bump as a pair of letters lands
+    const POP = 180;           // pause after the last pair lands
     const SETTLE = 150;
     const SPIN = 800;
     const STRETCH_FROM = 0.35; // fraction of the spin before it starts stretching
@@ -319,22 +319,19 @@
         }
         setOpacity(c.ch, 1);
         const e = p * p;
-        const scale = 1 - 0.35 * e;
-        c.ch.style.transform = `translateX(${(-c.dx * e).toFixed(2)}px) scale(${scale.toFixed(4)})`;
-        // Stay a letter for most of the trip and melt into a block near the middle
+        // Letters only slide; they never change size
+        c.ch.style.transform = `translateX(${(-c.dx * e).toFixed(2)}px)`;
+        // Stay a letter for most of the trip and fade into a block near the middle.
+        // The block is already the size the square will be once this letter lands.
         setOpacity(c.glyph, 1 - smooth(0.5, 0.9, e));
         setOpacity(c.block, smooth(0.4, 0.8, e));
-        // Arrive exactly the size the square will be once this letter lands
-        const side = lerp(0.42, sideAfter(T.filled[i]), e) / scale;
-        c.block.style.transform = `scale(${side.toFixed(4)})`;
+        c.block.style.transform = `scale(${sideAfter(T.filled[i]).toFixed(4)})`;
       });
 
       if (landed === 0 || t >= T.split) {
         setOpacity(square, 0);
       } else {
-        // Letters arrive at exactly this size, then the square gives a small bump
-        const bump = Math.sin(Math.PI * clamp01((t - T.landSorted[landed - 1]) / POP));
-        const side = sideAfter(landed) * (1 + 0.08 * bump);
+        const side = sideAfter(landed);
         const q = clamp01((t - T.spin) / SPIN);
         const turn = 360 * easeInOut(q);
         const stretch = easeInOut(clamp01((q - STRETCH_FROM) / (1 - STRETCH_FROM)));
