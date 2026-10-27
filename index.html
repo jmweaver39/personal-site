@@ -425,7 +425,7 @@
         for (let x = 0; x < cols; x++) {
           let n = 0;
           for (const o of octaves) n += o.w * noise((x / cols) * o.n, (y / cols) * o.n, o.n, o.s);
-          const density = 0.015 + 0.75 * smooth(0.5, 0.85, n) ** 1.5;
+          const density = 0.006 + 0.34 * smooth(0.5, 0.85, n) ** 1.5;
           if (hash(x, y, 99) >= density) continue;
           for (const at of [(y * cols * 2 + x) * 4, (y * cols * 2 + x + cols) * 4]) {
             data[at] = data[at + 1] = data[at + 2] = 0x80;
