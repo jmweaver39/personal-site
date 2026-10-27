@@ -14,11 +14,8 @@
        pixel; it only shrinks on screens too narrow for the 420px-wide name. */
     :root {
       --u: min(1px, (100vw - 48px) / 420);
-      --bg: #111111;
-      --dot: #434343;
+      --bg: #000000;
       --fg: #ffffff;
-      --dot-r: max(0.9px, 1.2 * var(--u));
-      --grid: calc(21 * var(--u));
       color-scheme: dark;
     }
 
@@ -37,11 +34,26 @@
 
     body {
       background-color: var(--bg);
-      background-image: radial-gradient(circle, var(--dot) var(--dot-r), transparent calc(var(--dot-r) + 0.6px));
-      background-size: var(--grid) var(--grid);
-      background-position: center;
       color: var(--fg);
       -webkit-font-smoothing: antialiased;
+    }
+
+    /* Drifting speckle pattern. The canvas holds two copies of a pattern that
+       repeats every --period px and slides right by one period, then wraps. */
+    .bg {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .bg canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+      will-change: transform;
     }
 
     .sr-only {
@@ -177,6 +189,8 @@
 <body>
   <h1 class="sr-only">Jay Weaver</h1>
 
+  <div class="bg" aria-hidden="true"><canvas></canvas></div>
+
   <div class="center">
     <p class="word" aria-hidden="true">jaymweaver.com</p>
     <div class="square" aria-hidden="true"></div>
@@ -193,7 +207,7 @@
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3"/></svg>
       </a>
       <a href="mailto:jmweaver39@gmail.com" aria-label="Email jmweaver39@gmail.com" title="jmweaver39@gmail.com">
-        <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="9" width="42" height="31" fill="#111111"/><path d="M3 11L24 27L45 11M6 8H42C44.6667 8 46 9.33333 46 12V36C46 38.6667 44.6667 40 42 40H6C3.33333 40 2 38.6667 2 36V12C2 9.33333 3.33333 8 6 8Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="4" y="9" width="42" height="31" style="fill: var(--bg)"/><path d="M3 11L24 27L45 11M6 8H42C44.6667 8 46 9.33333 46 12V36C46 38.6667 44.6667 40 42 40H6C3.33333 40 2 38.6667 2 36V12C2 9.33333 3.33333 8 6 8Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </nav>
   </div>
@@ -217,7 +231,7 @@
     const REVEAL_STAGGER = 60;
     const REVEAL = 260;        // one tile turning into its icon
     const HOLD_LINKS = 3000;   // links sit still before reversing back to the text
-    const FAST = 12;           // playback speed when jumping to the links
+    const FAST = 1.5;          // playback speed when the pointer calls up the links
 
     // Figma geometry, in Figma pixels
     const SQUARE = 50;
@@ -357,6 +371,78 @@
       links.classList.toggle("live", t >= T.reveal);
     }
 
+    // Background: grey speckles scattered with a density that follows soft clouds
+    // of noise. The noise wraps horizontally, so the pattern repeats every
+    // `period` px and can drift right forever.
+    const bgCanvas = document.querySelector(".bg canvas");
+    const SPECK = 2.25;  // Figma px per speckle
+    const DRIFT = 90;    // Figma px per second
+    const CLOUD = 420;   // Figma px across one cloud of speckles
+    let period = 1;      // CSS px
+
+    const hash = (x, y, s) => {
+      let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(s, 1442695041);
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+    };
+
+    // Smooth value noise that repeats every `nx` lattice cells across
+    function noise(x, y, nx, s) {
+      const xi = Math.floor(x);
+      const yi = Math.floor(y);
+      const fx = x - xi;
+      const fy = y - yi;
+      const x0 = ((xi % nx) + nx) % nx;
+      const x1 = (x0 + 1) % nx;
+      const a = hash(x0, yi, s);
+      const b = hash(x1, yi, s);
+      const c = hash(x0, yi + 1, s);
+      const d = hash(x1, yi + 1, s);
+      const ux = fx * fx * (3 - 2 * fx);
+      const uy = fy * fy * (3 - 2 * fy);
+      return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+    }
+
+    // One canvas pixel per speckle, scaled up crisply by CSS. The canvas holds
+    // two copies of a window-wide period side by side.
+    function paintBackground() {
+      const cell = SPECK * u;
+      const cols = Math.ceil(innerWidth / cell);
+      const rows = Math.ceil(innerHeight / cell);
+      period = cols * cell;
+      const octaves = [1, 2, 4].map((f, k) => ({
+        n: Math.max(1, Math.round((period / (CLOUD * u)) * f)),
+        w: [0.6, 0.28, 0.12][k],
+        s: k + 1,
+      }));
+
+      bgCanvas.width = cols * 2;
+      bgCanvas.height = rows;
+      const ctx = bgCanvas.getContext("2d");
+      const img = ctx.createImageData(cols * 2, rows);
+      const data = img.data;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          let n = 0;
+          for (const o of octaves) n += o.w * noise((x / cols) * o.n, (y / cols) * o.n, o.n, o.s);
+          const density = 0.015 + 0.75 * smooth(0.5, 0.85, n) ** 1.5;
+          if (hash(x, y, 99) >= density) continue;
+          for (const at of [(y * cols * 2 + x) * 4, (y * cols * 2 + x + cols) * 4]) {
+            data[at] = data[at + 1] = data[at + 2] = 0x80;
+            data[at + 3] = 0xff;
+          }
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      bgCanvas.style.width = `${period * 2}px`;
+      bgCanvas.style.height = `${rows * cell}px`;
+    }
+
+    function drift(now) {
+      const offset = reduce.matches ? 0 : ((now * DRIFT * u) / 1000) % period;
+      bgCanvas.style.transform = `translateX(${(offset - period).toFixed(2)}px)`;
+    }
+
     // Playback. The page is a pure function of `t`: the name types once
     // (0 to T.collapse), then `t` swings between the text (T.collapse) and the
     // links (T.shown), pausing at each end. Jumping to the links is just
@@ -370,12 +456,17 @@
     let focused = false;
     let tapped = false;
     let tapTimer = 0;
+    let ready = false;  // the name waits for its font; the background doesn't
 
     function tick(now) {
       const dt = last ? Math.min(now - last, 64) : 0;
       last = now;
+      drift(now);
 
-      if (reduce.matches) {
+      if (!ready) {
+        requestAnimationFrame(tick);
+        return;
+      } else if (reduce.matches) {
         t = T.shown;
       } else if (near || focused || tapped) {
         if (t < T.shown) {
@@ -446,7 +537,16 @@
     links.addEventListener("focusin", (e) => (focused = e.target.matches(":focus-visible")));
     links.addEventListener("focusout", () => (focused = false));
 
-    addEventListener("resize", measure);
+    let repaintTimer = 0;
+    addEventListener("resize", () => {
+      measure();
+      clearTimeout(repaintTimer);
+      repaintTimer = setTimeout(paintBackground, 150);
+    });
+
+    measure();
+    paintBackground();
+    requestAnimationFrame(tick);
 
     // Measure with the real font, but don't wait forever for it
     Promise.race([
@@ -456,7 +556,7 @@
       .catch(() => {})
       .then(() => {
         measure();
-        requestAnimationFrame(tick);
+        ready = true;
       });
 
     document.fonts.ready.then(measure);
