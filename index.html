@@ -10,10 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&text=jaymweaver.com&display=swap" rel="stylesheet">
   <style>
-    /* Sizes come from the 2400 x 1800 Figma frames at 100%. One --u is one Figma
-       pixel; it only shrinks on screens too narrow for the 420px-wide name. */
+    /* Sizes come from the 2400 x 1800 Figma frames, shown at half size. One --u
+       is one Figma pixel; it only shrinks further on screens too narrow for the
+       name. */
     :root {
-      --u: min(1px, (100vw - 48px) / 420);
+      --u: min(0.5px, (100vw - 48px) / 420);
       --bg: #000000;
       --fg: #ffffff;
       color-scheme: dark;
