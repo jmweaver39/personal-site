@@ -39,18 +39,21 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Drifting speckle pattern, drawn by the script at the screen's own
-       resolution so the browser never scales it */
+    /* Drifting speckle pattern: a static image made once at the screen's own
+       resolution, slid sideways by the browser in whole screen pixels */
     .bg {
       position: fixed;
       inset: 0;
+      overflow: hidden;
       pointer-events: none;
     }
 
-    .bg canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
+    .bg div {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-repeat: repeat-x;
+      will-change: transform;
     }
 
     .sr-only {
@@ -186,7 +189,7 @@
 <body>
   <h1 class="sr-only">Jay Weaver</h1>
 
-  <div class="bg" aria-hidden="true"><canvas></canvas></div>
+  <div class="bg" aria-hidden="true"><div></div></div>
 
   <div class="center">
     <p class="word" aria-hidden="true">jaymweaver.com</p>
@@ -368,19 +371,15 @@
     // Background: grey speckles scattered with a density that follows soft clouds
     // of noise. The noise wraps horizontally, so the pattern repeats every
     // `period` px and can drift right forever.
-    const bgCanvas = document.querySelector(".bg canvas");
-    const bgCtx = bgCanvas.getContext("2d", { alpha: false });
-    const BG = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#000";
-    // One pixel per speckle, holding two copies of a window-wide period side by side
-    const pattern = document.createElement("canvas");
+    const bgStrip = document.querySelector(".bg div");
     const SPECK = 2.25;  // Figma px per speckle
     const CONTRAST = 0.5; // speckle brightness against black, relative to Figma's #808080
     const GREY = Math.round(0x80 * CONTRAST);
     const DRIFT = 90;    // Figma px per second
     const CLOUD = 420;   // Figma px across one cloud of speckles
-    let period = 1;      // CSS px
-    let speckPx = 1;     // screen pixels per speckle
-    let drawnAt = null;  // where the pattern was last drawn, in screen pixels
+    let bgUrl = null;
+    let bgDrift = null;
+    let bgJob = 0;       // ignores images from a paint that a newer one replaced
 
     const hash = (x, y, s) => {
       let h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(s, 1442695041);
@@ -405,26 +404,30 @@
       return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
     }
 
-    // Speckles cover a whole number of screen pixels and are drawn straight onto
-    // a canvas at the screen's resolution. Letting the browser scale a smaller
-    // canvas made the speckles flicker brighter and darker, worst in Safari.
+    // The pattern becomes a static image at the screen's resolution, with each
+    // speckle a whole number of screen pixels, and the browser slides it one
+    // screen pixel at a time. Drawing it live (or letting the browser scale it)
+    // made the speckles flicker brighter and darker in Safari.
     function paintBackground() {
+      const job = ++bgJob;
       const dpr = devicePixelRatio || 1;
-      speckPx = Math.max(1, Math.round(SPECK * u * dpr));
+      const speckPx = Math.max(1, Math.round(SPECK * u * dpr));
       const cell = speckPx / dpr;
       const cols = Math.ceil(innerWidth / cell);
       const rows = Math.ceil(innerHeight / cell);
-      period = cols * cell;
+      const period = cols * cell;
       const octaves = [1, 2, 4].map((f, k) => ({
         n: Math.max(1, Math.round((period / (CLOUD * u)) * f)),
         w: [0.6, 0.28, 0.12][k],
         s: k + 1,
       }));
 
-      pattern.width = cols * 2;
-      pattern.height = rows;
-      const ctx = pattern.getContext("2d");
-      const img = ctx.createImageData(cols * 2, rows);
+      // One pixel per speckle...
+      const small = document.createElement("canvas");
+      small.width = cols;
+      small.height = rows;
+      const sctx = small.getContext("2d");
+      const img = sctx.createImageData(cols, rows);
       const data = img.data;
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
@@ -432,28 +435,43 @@
           for (const o of octaves) n += o.w * noise((x / cols) * o.n, (y / cols) * o.n, o.n, o.s);
           const density = 0.006 + 0.34 * smooth(0.5, 0.85, n) ** 1.5;
           if (hash(x, y, 99) >= density) continue;
-          for (const at of [(y * cols * 2 + x) * 4, (y * cols * 2 + x + cols) * 4]) {
-            data[at] = data[at + 1] = data[at + 2] = GREY;
-            data[at + 3] = 0xff;
-          }
+          const at = (y * cols + x) * 4;
+          data[at] = data[at + 1] = data[at + 2] = GREY;
+          data[at + 3] = 0xff;
         }
       }
-      ctx.putImageData(img, 0, 0);
-      bgCanvas.width = Math.round(innerWidth * dpr);
-      bgCanvas.height = Math.round(innerHeight * dpr);
-      drawnAt = null;
-    }
+      sctx.putImageData(img, 0, 0);
 
-    function drift(now) {
-      const dpr = devicePixelRatio || 1;
-      const offset = reduce.matches ? 0 : ((now * DRIFT * u) / 1000) % period;
-      const x = Math.round((offset - period) * dpr);
-      if (x === drawnAt) return;
-      drawnAt = x;
-      bgCtx.imageSmoothingEnabled = false;
-      bgCtx.fillStyle = BG;
-      bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-      bgCtx.drawImage(pattern, x, 0, pattern.width * speckPx, pattern.height * speckPx);
+      // ...then blown up to whole screen pixels per speckle
+      const full = document.createElement("canvas");
+      full.width = cols * speckPx;
+      full.height = rows * speckPx;
+      const fctx = full.getContext("2d");
+      fctx.imageSmoothingEnabled = false;
+      fctx.drawImage(small, 0, 0, full.width, full.height);
+
+      full.toBlob((blob) => {
+        if (job !== bgJob || !blob) return;
+        if (bgUrl) URL.revokeObjectURL(bgUrl);
+        bgUrl = URL.createObjectURL(blob);
+        Object.assign(bgStrip.style, {
+          backgroundImage: `url(${bgUrl})`,
+          backgroundSize: `${period}px ${rows * cell}px`,
+          width: `${period * 2}px`,
+          height: `${rows * cell}px`,
+        });
+        bgDrift?.cancel();
+        bgDrift = reduce.matches
+          ? null
+          : bgStrip.animate(
+              [{ transform: `translateX(${-period}px)` }, { transform: "translateX(0)" }],
+              {
+                duration: (period / (DRIFT * u)) * 1000,
+                iterations: Infinity,
+                easing: `steps(${Math.round(period * dpr)})`,
+              }
+            );
+      });
     }
 
     // Playback. The page is a pure function of `t`: the name types once
@@ -474,7 +492,6 @@
     function tick(now) {
       const dt = last ? Math.min(now - last, 64) : 0;
       last = now;
-      drift(now);
 
       if (!ready) {
         requestAnimationFrame(tick);
@@ -568,6 +585,8 @@
         { once: true }
       );
     })();
+
+    reduce.addEventListener("change", paintBackground);
 
     measure();
     paintBackground();
