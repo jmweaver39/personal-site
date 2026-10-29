@@ -409,6 +409,8 @@
     // screen pixel at a time. Drawing it live (or letting the browser scale it)
     // made the speckles flicker brighter and darker in Safari.
     function paintBackground() {
+      // A window with no size yet (a hidden tab, say) gets painted on its first resize
+      if (!innerWidth || !innerHeight) return;
       const job = ++bgJob;
       const dpr = devicePixelRatio || 1;
       const speckPx = Math.max(1, Math.round(SPECK * u * dpr));
