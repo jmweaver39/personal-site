@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Mail Icon">
+<rect id="Rectangle 7" x="4" y="9" width="42" height="31" fill="#111111"/>
+<path id="Envelope" d="M3 11L24 27L45 11M6 8H42C44.6667 8 46 9.33333 46 12V36C46 38.6667 44.6667 40 42 40H6C3.33333 40 2 38.6667 2 36V12C2 9.33333 3.33333 8 6 8Z" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke="white"/>
+</g>
+</svg>
