@@ -10,19 +10,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=League+Gothic&display=swap" rel="stylesheet">
   <script>
-    /* The opening plays once a visit, and never on the way back from the rocket */
-    (function () {
-      var seen = false;
-      try {
-        seen = sessionStorage.getItem("opening-seen") === "1";
-        sessionStorage.setItem("opening-seen", "1");
-      } catch (e) {}
-      var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      document.documentElement.dataset.opening = seen || still || location.hash === "#home" ? "skip" : "play";
-      if (location.hash) history.replaceState(null, "", location.pathname + location.search);
-    })();
+    /* The rocket hands back with a #home it no longer needs */
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   </script>
-  <script src="wipe.js?v=20261030l"></script>
+  <script src="wipe.js?v=20261030t"></script>
   <style>
     /* Sizes come from the 2400 x 1800 Figma frames, shown at half size. One --u
        is one Figma pixel; it only shrinks further on screens too small for the
@@ -85,10 +76,6 @@
     .page {
       position: fixed;
       inset: 0;
-    }
-
-    [data-opening="play"] .stage {
-      visibility: hidden;
     }
 
     /* A zero-size anchor at the middle of the window */
@@ -166,7 +153,18 @@
     .item text {
       font: 400 44px "IBM Plex Mono", ui-monospace, monospace;
       letter-spacing: 1px;
+      fill: #8f8f8f;
+      transition: fill 0.12s linear;
+    }
+
+    .item:focus-visible text {
       fill: var(--fg);
+    }
+
+    @media (hover: hover) {
+      .item:hover text {
+        fill: var(--fg);
+      }
     }
 
     /* The shader showing through the letters; title-fills.js sets its box */
@@ -209,25 +207,50 @@
       left: 0;
       top: calc(56 * var(--u));
       transform: translate(-50%, -50%);
-      min-height: 44px;
-      padding: 0 20px;
-      border: 1px solid var(--fg);
-      border-radius: 9px;
-      background: transparent;
-      color: var(--fg);
-      font: 400 16px/42px "League Gothic", Impact, sans-serif;
-      letter-spacing: 0.8px;
-      white-space: nowrap;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      background: none;
       cursor: pointer;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.14s linear, visibility 0s linear 0.14s, background 0.15s ease, color 0.15s ease;
+      transition: opacity 0.14s linear, visibility 0s linear 0.14s;
+    }
+
+    /* The 24px Arrow-Back icon, centred in the button, placed as Figma has it */
+    .arrow {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      width: 24px;
+      height: 24px;
+      filter: invert(1);
+      transition: opacity 0.15s ease;
+    }
+
+    .arrow span {
+      position: absolute;
+      left: 6.875px;
+      top: 4.125px;
+      width: 9.75px;
+      height: 16px;
+      transform: rotate(-90deg) scaleX(-1);
+    }
+
+    .arrow img {
+      position: absolute;
+      left: -0.354px;
+      top: -0.5px;
+      display: block;
+      width: 10.6043px;
+      height: 17.0009px;
+      max-width: none;
     }
 
     @media (hover: hover) {
-      .return:hover {
-        background: var(--fg);
-        color: #000000;
+      .return:hover .arrow {
+        opacity: 0.6;
       }
     }
 
@@ -349,35 +372,7 @@
     [data-open] .return {
       opacity: 1;
       visibility: visible;
-      transition: opacity 0.2s linear 0.42s, visibility 0s linear, background 0.15s ease, color 0.15s ease;
-    }
-
-    /* The opening: pieces that only exist while it plays */
-    .square,
-    .bar,
-    .row i {
-      position: absolute;
-      left: 0;
-      background: var(--fg);
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .square {
-      top: 0;
-      width: calc(50 * var(--u));
-      height: calc(50 * var(--u));
-    }
-
-    .bar {
-      height: calc(170 * var(--u));
-    }
-
-    .row i {
-      top: calc(256 * var(--u));
-      left: calc(-129 * var(--u) + var(--j) * 70 * var(--u));
-      width: calc(48 * var(--u));
-      height: calc(48 * var(--u));
+      transition: opacity 0.2s linear 0.42s, visibility 0s linear;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -397,7 +392,6 @@
   </style>
   <noscript>
     <style>
-      [data-opening] .stage { visibility: visible; }
       .entry { position: static; transform: none; }
       .drawer { position: static; visibility: visible; }
       .slide { transform: none; }
@@ -420,9 +414,8 @@
         </button>
         <div class="drawer" id="drawer-projects">
           <div class="slide">
-            <a class="item" href="raven-rocket.html?v=20261030l" data-wipe-link data-fill="raven">
+            <a class="item" href="raven-rocket.html?v=20261030t" data-wipe-link>
               <span class="sr-only">Raven L-1420</span>
-              <canvas class="fill" data-shader="spectrogram" aria-hidden="true"></canvas>
               <svg viewBox="0 0 600 88" aria-hidden="true"><text class="ink" x="300" y="58" text-anchor="middle">Raven L-1420</text></svg>
             </a>
           </div>
@@ -437,16 +430,15 @@
         </button>
         <div class="drawer" id="drawer-research">
           <div class="slide">
-            <a class="item" href="research.html" data-glitch-link data-fill="electrode">
+            <a class="item" href="research.html" data-glitch-link>
               <span class="sr-only">Electrode test setup</span>
-              <canvas class="fill" data-shader="corona" aria-hidden="true"></canvas>
               <svg viewBox="0 0 600 88" aria-hidden="true"><text class="ink" x="300" y="58" text-anchor="middle">Electrode test setup</text></svg>
             </a>
           </div>
         </div>
       </section>
 
-      <button class="return" type="button">return</button>
+      <button class="return" type="button" aria-label="Return"><span class="arrow" aria-hidden="true"><span><img src="images/home/icons/arrow-back-group.svg" alt=""></span></span></button>
 
       <nav class="links" aria-label="Contact">
         <a href="https://www.linkedin.com/in/jay-weaver2/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" title="LinkedIn"><span class="icon"><img class="backing" src="images/home/logos/linkedin-rectangle.svg" alt=""><img src="images/home/logos/linkedin-white.svg" alt=""></span></a>
@@ -455,60 +447,40 @@
         <a href="mailto:jmweaver39@gmail.com" aria-label="Email jmweaver39@gmail.com" title="jmweaver39@gmail.com"><span class="icon"><img src="images/home/logos/mail-icon.svg" alt=""></span></a>
       </nav>
 
-      <div class="square" aria-hidden="true"></div>
-      <div class="bar" aria-hidden="true"></div>
-      <div class="bar" aria-hidden="true"></div>
-      <div class="row" aria-hidden="true"><i style="--j: 0"></i><i style="--j: 1"></i><i style="--j: 2"></i><i style="--j: 3"></i></div>
     </div>
   </main>
 
   <script>
-    const root = document.documentElement;
     const body = document.body;
-    const stage = document.querySelector(".stage");
     const returnEl = document.querySelector(".return");
     const entries = [...document.querySelectorAll(".entry")];
     const links = document.querySelector(".links");
     const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-    const EASE = "cubic-bezier(0.76, 0, 0.24, 1)";
 
     // CSS pixels per Figma pixel
     let u = 0.5;
     function measure() {
-      u = document.querySelector(".square").offsetWidth / 50 || 0.5;
+      u = links.firstElementChild.offsetWidth / 48 || 0.5;
     }
 
     // Background: Figma's speckle clouds, baked into one strip two screens wide.
-    // It slides across once in 40 seconds and back, since the noise doesn't wrap
-    // and both ends of the move are at rest. Each dither cell is a whole number
+    // It slides across at one slow, steady speed, then back, since the noise
+    // doesn't wrap. Each dither cell is a whole number
     // of screen pixels and the strip only moves by whole screen pixels: scaling
     // or sliding it by less made the speckles flicker in Safari.
     const bgStrip = document.querySelector(".bg div");
     const CELLS_W = 2400;
     const CELLS_H = 900;
     const CELL = 2;        // Figma px per dither cell
-    const CROSSING = 40000;
+    const CROSSING = 120000;
     let bgCell = 1;        // CSS px per dither cell
     let bgLeft = NaN;
-
-    // Figma's cubic-bezier(0.5, 0, 0.5, 1)
-    function bgEase(p) {
-      let lo = 0;
-      let hi = 1;
-      for (let i = 0; i < 18; i++) {
-        const s = (lo + hi) / 2;
-        if (1.5 * s * (1 - s) + s * s * s < p) lo = s;
-        else hi = s;
-      }
-      const s = (lo + hi) / 2;
-      return s * s * (3 - 2 * s);
-    }
 
     function placeBackground(now) {
       const phase = (now % (CROSSING * 2)) / CROSSING;
       const p = reduce.matches ? 0 : phase < 1 ? phase : 2 - phase;
       const dpr = devicePixelRatio || 1;
-      const left = Math.round(-(CELLS_W / 2) * bgCell * (1 - bgEase(p)) * dpr) / dpr;
+      const left = Math.round(-(CELLS_W / 2) * bgCell * (1 - p) * dpr) / dpr;
       if (left !== bgLeft) {
         bgLeft = left;
         bgStrip.style.transform = `translateX(${left}px)`;
@@ -553,8 +525,14 @@
       }
       links.toggleAttribute("inert", !!name);
       document.dispatchEvent(new CustomEvent("fills:pin", { detail: name }));
-      if (name) entries.find((e) => e.dataset.entry === name).querySelector(".item").focus({ preventScroll: true });
-      else if (was) entries.find((e) => e.dataset.entry === was).querySelector(".word").focus({ preventScroll: true });
+      clearTimeout(openTimer);
+      if (name) {
+        const item = entries.find((e) => e.dataset.entry === name).querySelector(".item");
+        item.focus({ preventScroll: true });
+        openTimer = setTimeout(() => scramblers.get(item)(), OPEN_AT);
+      } else if (was) {
+        entries.find((e) => e.dataset.entry === was).querySelector(".word").focus({ preventScroll: true });
+      }
     }
 
     for (const entry of entries) {
@@ -572,73 +550,50 @@
       if (e.persisted && body.dataset.open) setOpen(null);
     });
 
-    // The opening keeps the old square, spin and stretch, then ends on the words:
-    // the bar splits in two, each half covers its word and shrinks off it like a
-    // fast block cursor, and the logos land last. About two seconds.
-    function play() {
-      const moves = [];
-      const run = (el, frames, options) => {
-        const move = el.animate(frames, { easing: EASE, fill: "both", ...options });
-        moves.push(move);
-        return move;
+    // A drawer row scrambles as it slides out: its letters cycle
+    // through random ones and lock back in one by one, left to right. Numbers
+    // and symbols hold still.
+    const SCRAMBLE = "abcdefghijklmnopqrstuvwxyz";
+    const CYCLE = 16;    // ms each character holds
+    const STEP = 16;     // ms between letters locking
+
+    const OPEN_AT = 180;   // ms into opening that the row starts to slide
+    const HOLD = 260;      // and how long its letters run before locking
+    const scramblers = new Map();
+    let openTimer = 0;
+
+    for (const item of document.querySelectorAll(".item")) {
+      const text = item.querySelector("text");
+      const word = text.textContent;
+      let raf = 0;
+      let drawn = 0;
+
+      const stop = () => {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        text.textContent = word;
       };
-      const centre = "translate(-50%, -50%)";
+      const scramble = () => {
+        if (reduce.matches) return;
+        stop();
+        const start = performance.now();
+        drawn = 0;
+        const frame = (now) => {
+          const t = now - start;
+          if (t >= HOLD + word.length * STEP) return stop();
+          if (t - drawn >= CYCLE) {
+            drawn = t;
+            const locked = Math.max(0, Math.floor((t - HOLD) / STEP));
+            text.textContent = [...word]
+              .map((ch, i) => (i < locked || !/[a-z]/i.test(ch) ? ch : SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)]))
+              .join("");
+          }
+          raf = requestAnimationFrame(frame);
+        };
+        raf = requestAnimationFrame(frame);
+      };
 
-      run(document.querySelector(".square"), [
-        { opacity: 1, transform: `${centre} rotate(0deg) scale(0)`, offset: 0 },
-        { opacity: 1, transform: `${centre} rotate(0deg) scale(1)`, offset: 0.25 },
-        { opacity: 1, transform: `${centre} rotate(0deg) scale(1)`, offset: 0.31 },
-        { opacity: 1, transform: `${centre} rotate(360deg) scale(6, 0.48)`, offset: 0.99 },
-        { opacity: 0, transform: `${centre} rotate(360deg) scale(6, 0.48)`, offset: 1 },
-      ], { delay: 200, duration: 800, fill: "forwards" });
-
-      entries.forEach((entry, i) => {
-        const svg = entry.querySelector(".word svg");
-        const bar = document.querySelectorAll(".bar")[i];
-        const text = entry.querySelector(".word text");
-        const ink = text.getComputedTextLength() * u;
-        const y = (i ? 88 : -88) * u;
-        const box = svg.getBoundingClientRect().width;
-        const inkLeft = (box - ink) / 2;
-        const at = 1250 + i * 90;
-
-        bar.style.width = `${ink + 8}px`;
-        run(bar, [
-          { opacity: 1, transform: `${centre} translateY(0px) scale(${(300 * u) / ink}, ${24 / 170})` },
-          { opacity: 1, transform: `${centre} translateY(${y}px) scale(1, 1)` },
-        ], { delay: 1000, duration: 250, fill: "forwards" });
-        run(bar, [
-          { clipPath: "inset(0 0 0 0)" },
-          { clipPath: "inset(0 0 0 100%)" },
-        ], { delay: at, duration: 400, fill: "forwards" });
-        run(svg, [
-          { clipPath: `inset(-40% ${box - inkLeft}px -40% -10px)` },
-          { clipPath: "inset(-40% -10px -40% -10px)" },
-        ], { delay: at, duration: 400 });
-      });
-
-      [...document.querySelectorAll(".row i")].forEach((tile, j) => {
-        const at = 1650 + j * 60;
-        run(tile, [
-          { opacity: 1, transform: `translateY(${-90 * u}px) scale(0.5)` },
-          { opacity: 1, transform: "translateY(0) scale(1)", offset: 0.6 },
-          { opacity: 0, transform: "translateY(0) scale(0.82)" },
-        ], { delay: at, duration: 300, fill: "forwards" });
-        run(links.children[j], [
-          { opacity: 0, transform: "scale(0.86)" },
-          { opacity: 1, transform: "scale(1)" },
-        ], { delay: at + 170, duration: 130 });
-      });
-
-      root.dataset.opening = "running";
-      stage.inert = true;
-      Promise.all(moves.map((m) => m.finished))
-        .catch(() => {})
-        .then(() => {
-          moves.forEach((m) => m.cancel());
-          stage.inert = false;
-          root.dataset.opening = "done";
-        });
+      scramblers.set(item, scramble);
     }
 
     let repaintTimer = 0;
@@ -665,18 +620,8 @@
     measure();
     paintBackground();
     requestAnimationFrame(tick);
-
-    // The words wait for their font, but not forever
-    if (root.dataset.opening === "play") {
-      Promise.race([
-        document.fonts.load('200px "League Gothic"', "ProjectsResearch"),
-        new Promise((resolve) => setTimeout(resolve, 1500)),
-      ])
-        .catch(() => {})
-        .then(play);
-    }
   </script>
-  <script type="module" src="title-fills.js?v=20261030l"></script>
+  <script type="module" src="title-fills.js?v=20261030t"></script>
   <script src="glitch.js"></script>
 </body>
 </html>

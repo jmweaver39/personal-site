@@ -1,4 +1,4 @@
-/* The hover fills on the home words and the rows in their drawers: Figma's
+/* The hover fills on the home words: Figma's
    "Scrolling spectrogram" and "Corona plasma" shaders, ported from WGSL to
    WebGL2, each showing through its letters. Nothing runs until something is
    hovered or focused, and a canvas stops drawing once it has faded away.
@@ -310,7 +310,7 @@ function set(fill, on) {
 for (const fill of fills) {
   const { line } = fill;
   line.addEventListener("pointerenter", (e) => {
-    if (e.pointerType === "touch" || line.closest('[data-open] .word, [data-opening="running"] *')) return;
+    if (e.pointerType === "touch" || line.closest("[data-open] .word")) return;
     set(fill, true);
   });
   line.addEventListener("pointerleave", () => set(fill, false));
@@ -332,7 +332,4 @@ document.addEventListener("fills:pin", (e) => {
   wake();
 });
 document.addEventListener("fills:clear", () => fills.forEach((f) => { if (f.on) set(f, false); }));
-Promise.all([
-  document.fonts.load('200px "League Gothic"', "ProjectsResearch"),
-  document.fonts.load('44px "IBM Plex Mono"', "Raven L-1420 Electrode test setup"),
-]).then(layout);
+document.fonts.load('200px "League Gothic"', "ProjectsResearch").then(layout);
