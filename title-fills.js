@@ -150,6 +150,7 @@ vec4 fill() {
 }`;
 
 const SHADERS = { spectrogram: SPECTROGRAM, corona: CORONA };
+const GRACE = 120;       // ms a word stays lit after the mouse leaves its letters
 const FADE = 220;        // ms for a fill to come up or go away
 const MAX_SCALE = 1.5;   // canvas pixels per CSS pixel: small grain, cheap enough to run
 
@@ -198,7 +199,6 @@ class Fill {
   /* draws the letters where the svg put them, then crops to their ink, which is
      the box the shader's uv spans */
   layout() {
-    if (!this.gl) return;
     const svg = this.text.ownerSVGElement;
     const figma = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;   // CSS px per Figma px
     if (!figma) return;
@@ -248,11 +248,31 @@ class Fill {
       width: `${cw / per}px`,
       height: `${ch / per}px`,
     });
+    this.letters = { data: crop.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, cw, ch).data, cw, ch };
     const gl = this.gl;
+    if (!gl) return;
     gl.viewport(0, 0, cw, ch);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, crop);
     gl.uniform2f(this.uDims, cw / scale, ch / scale);
     this.draw(0);
+  }
+
+  /* is this page point on the letters, within `slop` CSS px? */
+  covers(x, y, slop) {
+    if (!this.letters) return false;
+    const { data, cw, ch } = this.letters;
+    const box = this.canvas.getBoundingClientRect();
+    const scale = cw / box.width;
+    const near = Math.ceil(slop * scale);
+    const px = Math.round((x - box.left) * scale);
+    const py = Math.round((y - box.top) * scale);
+    for (let dy = -near; dy <= near; dy += Math.max(1, near)) {
+      for (let dx = -near; dx <= near; dx += Math.max(1, near)) {
+        const qx = px + dx, qy = py + dy;
+        if (qx >= 0 && qy >= 0 && qx < cw && qy < ch && data[(qy * cw + qx) * 4 + 3] > 40) return true;
+      }
+    }
+    return false;
   }
 
   draw(seconds) {
@@ -309,16 +329,50 @@ function set(fill, on) {
 
 for (const fill of fills) {
   const { line } = fill;
-  line.addEventListener("pointerenter", (e) => {
-    if (e.pointerType === "touch" || line.closest("[data-open] .word")) return;
-    set(fill, true);
-  });
-  line.addEventListener("pointerleave", () => set(fill, false));
   line.addEventListener("focus", () => {
     if (line.matches(":focus-visible") && !line.closest("[data-open] .word")) set(fill, true);
   });
   line.addEventListener("blur", () => set(fill, false));
 }
+
+/* The words themselves don't take the mouse: it's tested against their pixels */
+const under = (x, y, slop) => (body.dataset.open || document.documentElement.dataset.phase ? null : fills.find((f) => f.covers(x, y, slop)) || null);
+let hovered = null;
+let leaving = 0;
+
+function hover(fill) {
+  document.documentElement.style.cursor = fill ? "pointer" : "";
+  if (fill === hovered) {
+    clearTimeout(leaving);
+    leaving = 0;
+    return;
+  }
+  if (fill) {
+    clearTimeout(leaving);
+    leaving = 0;
+    if (hovered) set(hovered, false);
+    hovered = fill;
+    set(fill, true);
+  } else if (!leaving) {
+    /* a moment's grace, so crossing the gaps between letters doesn't flicker */
+    leaving = setTimeout(() => {
+      leaving = 0;
+      if (hovered) set(hovered, false);
+      hovered = null;
+    }, GRACE);
+  }
+}
+
+addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "touch") hover(under(e.clientX, e.clientY, 1));
+}, { passive: true });
+document.documentElement.addEventListener("mouseleave", () => hover(null));
+
+addEventListener("click", (e) => {
+  if (!e.detail || e.target.closest("a, button")) return;
+  const fill = under(e.clientX, e.clientY, e.pointerType === "touch" ? 10 : 1);
+  if (fill) fill.line.click();
+});
 
 const layout = () => fills.forEach((f) => f.layout());
 let timer = 0;
@@ -331,5 +385,11 @@ document.addEventListener("fills:pin", (e) => {
   for (const fill of fills) fill.pinned = fill.line.dataset.fill === e.detail;
   wake();
 });
-document.addEventListener("fills:clear", () => fills.forEach((f) => { if (f.on) set(f, false); }));
+document.addEventListener("fills:clear", () => {
+  clearTimeout(leaving);
+  leaving = 0;
+  hovered = null;
+  document.documentElement.style.cursor = "";
+  fills.forEach((f) => { if (f.on) set(f, false); });
+});
 document.fonts.load('200px "League Gothic"', "ProjectsResearch").then(layout);

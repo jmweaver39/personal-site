@@ -13,7 +13,7 @@
     /* The rocket hands back with a #home it no longer needs */
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   </script>
-  <script src="wipe.js?v=20261030t"></script>
+  <script src="wipe.js?v=20261030w"></script>
   <style>
     /* Sizes come from the 2400 x 1800 Figma frames, shown at half size. One --u
        is one Figma pixel; it only shrinks further on screens too small for the
@@ -121,8 +121,11 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    /* The mouse only counts on the letters themselves, descenders included:
+       title-fills.js tests it against each word's pixels */
     .word {
       height: calc(176 * var(--u));
+      pointer-events: none;
       transition: opacity 0.22s ease;
     }
 
@@ -414,7 +417,7 @@
         </button>
         <div class="drawer" id="drawer-projects">
           <div class="slide">
-            <a class="item" href="raven-rocket.html?v=20261030t" data-wipe-link>
+            <a class="item" href="raven-rocket.html?v=20261030w" data-wipe-link>
               <span class="sr-only">Raven L-1420</span>
               <svg viewBox="0 0 600 88" aria-hidden="true"><text class="ink" x="300" y="58" text-anchor="middle">Raven L-1420</text></svg>
             </a>
@@ -621,7 +624,7 @@
     paintBackground();
     requestAnimationFrame(tick);
   </script>
-  <script type="module" src="title-fills.js?v=20261030t"></script>
+  <script type="module" src="title-fills.js?v=20261030w"></script>
   <script src="glitch.js"></script>
 </body>
 </html>
