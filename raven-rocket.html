@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Raven L-1420 Rocket — Jay Weaver</title>
+  <script src="wipe.js?v=20261030i" data-end="index.html?v=20261030i#home"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
@@ -18,6 +19,7 @@
       --title-size: clamp(40px, min(9.8vw, 100svh / 6.2), 235px);
       --bar-size: clamp(22px, 2.6vw, 62px);
       --squeeze: 0.72;
+      --accent: #ff5a1f;
     }
 
     *,
@@ -41,8 +43,8 @@
 
     .track {
       position: relative;
-      height: 1432vh;
-      height: 1432svh;
+      height: 2030vh;
+      height: 2030svh;
     }
 
     .stage {
@@ -79,7 +81,7 @@
       pointer-events: none;
     }
 
-    /* the feed's small print, in the HUD's type; under the paper, so it
+    /* the feed's small print, in the HUD's type, so it
        goes with the video */
     .credit {
       position: absolute;
@@ -100,20 +102,6 @@
       .credit {
         bottom: 88px;
       }
-    }
-
-    /* the page's own paper, laid over the whole feed (video, smoke and
-       HUD alike) as the view fills with sky, so the final page fades in
-       as one sheet under the flight summary */
-    .fade {
-      position: absolute;
-      inset: 0;
-      z-index: 3;
-      opacity: 0;
-      pointer-events: none;
-      background-color: var(--bg);
-      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
-      background-size: 16px 16px;
     }
 
     .dark {
@@ -224,140 +212,35 @@
       color: rgba(17, 17, 17, 0.6);
     }
 
-    /* the flight summary: laid over the stage and brought up with the
-       paper as the feed fades out, so the video ends on it */
-    .flight {
-      position: absolute;
-      inset: 0;
-      z-index: 3;
-      padding: var(--top) var(--left);
-      overflow: hidden;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .flight.live {
-      pointer-events: auto;
-    }
-
-    .flight h2 {
-      margin: 0;
-      font-family: "Anton", "Impact", sans-serif;
-      font-weight: 400;
-      font-size: var(--bar-size);
-      line-height: 0.95;
-      letter-spacing: -0.02em;
-      color: transparent;
-      -webkit-text-stroke: max(1px, 0.02em) var(--fg);
-      transform: scaleX(var(--squeeze));
-      transform-origin: left top;
-      white-space: nowrap;
-    }
-
-    .flight .lede {
-      margin: 0.9em 0 2.4em;
-      font-size: clamp(10px, 0.8vw, 12px);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: rgba(17, 17, 17, 0.55);
-    }
-
-    .boxes {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      max-width: 1180px;
-    }
-
-    .box {
-      padding: 16px 18px 18px;
-      border: 1px solid rgba(17, 17, 17, 0.28);
-      will-change: opacity, transform;
-    }
-
-    .box .k {
-      font-size: clamp(10px, 0.8vw, 12px);
-      font-weight: 600;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: rgba(17, 17, 17, 0.95);
-    }
-
-    .box .v {
-      margin: 18px 0 8px;
-      font-family: "Anton", "Impact", sans-serif;
-      font-size: clamp(34px, 3.6vw, 58px);
-      line-height: 1;
-      letter-spacing: -0.01em;
-      transform: scaleX(var(--squeeze));
-      transform-origin: left center;
-      white-space: nowrap;
-    }
-
-    .box .d {
-      font-size: clamp(12px, 0.95vw, 14px);
-      line-height: 1.45;
-      color: rgba(17, 17, 17, 0.6);
-    }
-
-    /* phones: two columns, tighter, so all six fit the one screen, clear
-       of the section dots down the right edge; short wide screens (a phone
-       on its side) keep three columns with the same tight cards */
-    @media (max-width: 760px) {
-      .boxes {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 760px), (max-height: 560px) {
-      .flight {
-        padding-right: calc(var(--left) + 22px);
-      }
-
-      .flight .lede {
-        margin-bottom: 1.6em;
-      }
-
-      .boxes {
-        gap: 10px;
-      }
-
-      .box {
-        padding: 12px 12px 13px;
-      }
-
-      .box .k {
-        font-size: 9.5px;
-        letter-spacing: 0.12em;
-      }
-
-      .box .v {
-        margin: 10px 0 6px;
-        font-size: 30px;
-      }
-
-      .box .d {
-        font-size: 11.5px;
-        line-height: 1.4;
-      }
-    }
-
+    /* in the hint's place, coming up once it has gone. They invert against
+       whatever is behind them, so they read on the paper, the feed and the Mac */
     .dots {
       position: absolute;
-      right: clamp(14px, 1.8vw, 30px);
-      top: 50%;
-      transform: translateY(-50%);
+      left: 50%;
+      bottom: clamp(14px, 2.2vh, 28px);
+      transform: translateX(-50%);
       z-index: 4;
       display: flex;
-      flex-direction: column;
       gap: 14px;
+      mix-blend-mode: difference;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.3s linear, visibility 0s 0.3s;
+    }
+
+    .dots.shown {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 0.3s linear 0.3s, visibility 0s 0.3s;
     }
 
     .dots button {
       width: 9px;
       height: 9px;
       border-radius: 50%;
-      border: 1px solid rgba(17, 17, 17, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.6);
       background: transparent;
       padding: 0;
       cursor: pointer;
@@ -365,8 +248,8 @@
     }
 
     .dots button.on {
-      background: var(--fg);
-      border-color: var(--fg);
+      background: #ffffff;
+      border-color: #ffffff;
       transform: scale(1.3);
     }
 
@@ -418,6 +301,52 @@
       letter-spacing: 0.08em;
       color: rgba(17, 17, 17, 0.55);
     }
+
+    /* a stop's labels open a card on hover (or a tap, or focus) */
+    .co {
+      text-align: center;
+      outline: none;
+    }
+
+    .co.live {
+      pointer-events: auto;
+      cursor: default;
+    }
+
+    .co .t::after {
+      content: "+";
+      content: "+" / "";
+      margin-left: 0.6em;
+      color: var(--accent);
+    }
+
+    .co.open {
+      z-index: 2;
+    }
+
+    .co.open .t::after {
+      content: "\2013";
+      content: "\2013" / "";
+    }
+
+    .co .more {
+      display: none;
+      width: 264px;
+      margin: 8px auto 0;
+      padding: 10px 12px 11px;
+      text-align: left;
+      white-space: normal;
+      font-size: 12px;
+      line-height: 1.5;
+      color: rgba(17, 17, 17, 0.78);
+      background: var(--bg);
+      border: 1px solid rgba(17, 17, 17, 0.28);
+      border-top: 2px solid var(--accent);
+    }
+
+    .co.open .more {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -430,44 +359,6 @@
       <div class="flash" aria-hidden="true"></div>
       <canvas class="telem" aria-hidden="true"></canvas>
       <p class="credit">Simulation · Imagery © Google Earth</p>
-      <div class="fade" aria-hidden="true"></div>
-
-      <section class="flight" aria-labelledby="flight-h">
-        <h2 id="flight-h">The Flight</h2>
-        <p class="lede">Simulated in OpenRocket · liftoff to touchdown</p>
-        <div class="boxes">
-          <article class="box">
-            <div class="k">Apogee</div>
-            <div class="v">9,714 ft</div>
-            <div class="d">Peak altitude at T+22.7 s, where the drogue comes out.</div>
-          </article>
-          <article class="box">
-            <div class="k">Top speed</div>
-            <div class="v">770 mph</div>
-            <div class="d">Mach 1.02 at T+2.4 s, just before burnout.</div>
-          </article>
-          <article class="box">
-            <div class="k">Boost</div>
-            <div class="v">28 G</div>
-            <div class="d">Peak acceleration off a 2.6 s burn, 1,697 N at peak thrust.</div>
-          </article>
-          <article class="box">
-            <div class="k">Drogue</div>
-            <div class="v">46 mph</div>
-            <div class="d">Descent rate under the drogue from apogee until the main opens at T+161 s.</div>
-          </article>
-          <article class="box">
-            <div class="k">Touchdown</div>
-            <div class="v">8 mph</div>
-            <div class="d">Landing speed under the main parachute.</div>
-          </article>
-          <article class="box">
-            <div class="k">Flight time</div>
-            <div class="v">202 s</div>
-            <div class="d">Liftoff to touchdown, landing 734 ft from the pad.</div>
-          </article>
-        </div>
-      </section>
 
       <div class="sections" aria-hidden="true">
         <div class="sec" data-i="0">
@@ -492,11 +383,8 @@
         <button data-p="0.6216" aria-label="Onboard camera"></button>
       </nav>
 
-      <div class="callouts" aria-hidden="true">
-        <svg><g style="stroke:rgba(17,17,17,0.5);stroke-width:1;fill:none"></g></svg>
-        <div class="co"><div class="t">915 MHz half-wave dipole</div><div class="d">RFD900x telemetry · 3 dBi</div></div>
-        <div class="co"><div class="t">Quarter-wave LoRa</div><div class="d">λ/4 monopole</div></div>
-        <div class="co"><div class="t">M9N GPS</div><div class="d">u-blox GNSS</div></div>
+      <div class="callouts">
+        <svg aria-hidden="true"><g style="stroke:rgba(17,17,17,0.5);stroke-width:1;fill:none"></g></svg>
       </div>
       <div class="hint">Scroll to separate</div>
     </div>
@@ -521,21 +409,42 @@
        slides the sections apart along the axis. Model axis: +z toward the
        nose; metres. */
     const GAP = 0.42;
-    /* scroll phases, as fractions of the track's 1332svh of scroll. The
-       ones up to the dive were laid out on 1050svh and are scaled by PRE
-       to keep their own lengths; the dark in the tube then gets 30svh more
-       than it had there, and the filmed separation 504svh */
-    const PRE = 1050 / 1332;
-    const HERO_END = 0.05 * PRE, SPLIT_END = 0.26 * PRE;
-    const ZOOM0 = 0.29 * PRE, ZOOM1 = 0.42 * PRE;  // close in on the nose section
-    const REV0 = 0.45 * PRE, REV1 = 0.60 * PRE;    // shells fade, payload spins
-    const POV0 = 0.62 * PRE, POV1 = 0.72 * PRE;    // fly down to the onboard camera
-    const DIVE1 = 0.735 * PRE;                     // on into the lower tube: black
-    const SEP0 = (0.76 * 1050 + 30) / 1332, SEP1 = 1.0;   // slow-motion separation, filmed
-    /* with the stack split, the lower tube's mouth (its forward end at
-       z 0.813) sits GAP - 0.158 m aft of the lens (z 0.655); the dive ends
-       6 cm inside it */
-    const DIVE = GAP - (0.813 - 0.655) + 0.06;
+    /* the scroll, in svh, one stretch after another. The holds are the
+       stops, where the payload slows to a crawl for its callouts; between
+       them it turns a full spin onto its next face. Keep .track's height at
+       this total + 100 */
+    const HOLD = 60, SPIN = 90;
+    const STRETCHES = [
+      ["hero", 72.5],        // assembled
+      ["split", 220.5],      // sections slide apart
+      ["separated", 71.5],
+      ["zoom", 136.5],       // close in on the nose section
+      ["nose", 71.5],
+      ["reveal", 157.5],     // shells fade, the payload turns to its first face
+      ["stop0", HOLD], ["spin1", SPIN],
+      ["stop1", HOLD], ["spin2", SPIN],
+      ["stop2", HOLD], ["spin3", SPIN],
+      ["stop3", HOLD],
+      ["dive", 130],         // one sweep down past the payload, into the tube
+      ["dark", 56],          // in the tube until the charge fires
+      ["feed", 504],         // the filmed separation
+    ];
+    const SCROLL_SVH = STRETCHES.reduce((s, [, len]) => s + len, 0);
+    const PH = {};
+    STRETCHES.reduce((at, [name, len]) => {
+      PH[name] = [at / SCROLL_SVH, (at + len) / SCROLL_SVH];
+      return at + len;
+    }, 0);
+    const mid = ([a, b]) => (a + b) / 2;
+    const HERO_END = PH.split[0], SPLIT_END = PH.split[1];
+    const ZOOM0 = PH.zoom[0], ZOOM1 = PH.zoom[1];
+    const REV0 = PH.reveal[0], REV1 = PH.reveal[1];
+    const DIVE0 = PH.dive[0], DIVE1 = PH.dive[1];
+    const SEP0 = PH.feed[0], SEP1 = 1.0;           // slow-motion separation, filmed
+    /* the sweep ends GAP into the split stack's lower tube: exactly where
+       the lens sits in it once the rocket is closed up, so closing it up
+       there changes nothing in view */
+    const DIVE = GAP;
     const SEP_GAP = 2.0;                  // metres of slow-mo separation
     const BUMP_ROLL = 0.77;                // rolls the camera pod to the top
     const easeSoft = (t) => t * t * t * (t * (t * 6 - 15) + 10);
@@ -544,19 +453,8 @@
     const stage = document.querySelector(".stage");
     const canvas = document.querySelector("canvas.gl");
     const hint = document.querySelector(".hint");
+    const dotsEl = document.querySelector(".dots");
     const secEls = [...document.querySelectorAll(".sec")];
-    const coEls = [...document.querySelectorAll(".co")];
-    const coG = document.querySelector(".callouts g");
-    const SVGNS = "http://www.w3.org/2000/svg";
-    const coLines = coEls.map(() => {
-      const pl = document.createElementNS(SVGNS, "polyline");
-      const dot = document.createElementNS(SVGNS, "circle");
-      dot.setAttribute("r", "2.5");
-      dot.style.fill = "rgba(17,17,17,0.85)";
-      dot.style.stroke = "none";
-      coG.append(pl, dot);
-      return { pl, dot };
-    });
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -830,9 +728,7 @@
        flood the tube and cord for a few frames */
     const flashEl = document.querySelector(".flash");
     const darkEl = document.querySelector(".dark");
-    const fadeEl = document.querySelector(".fade");
     const creditEl = document.querySelector(".credit");
-    const FADE0 = 208;                     // frame where +10 deg leaves the frame
     const flashTex = (() => {
       const S = 128;
       const c = document.createElement("canvas");
@@ -1032,19 +928,176 @@
     }
 
     let C0 = new THREE.Vector3(), L0 = 2.5, len1 = 0.7, cz = [0, 0, 0], tubeR = 0.08, ready = false;
-    const shellMeshes = [], shellMats = [], mountMats = [];
+    const shellMeshes = [], shellMats = [], mountMats = [], panelMeshes = [];
 
-    /* upper payload: the 915 MHz dipole, the LoRa quarter-wave and the M9N
-       (model-space centres from the CAD) */
+    /* the antennas, by points on them (model space, from the CAD); the
+       other parts are anchored at their centres */
     const DIPOLE = new THREE.Vector3(0.020, -0.006, 1.154);
-    const CALLOUTS = [
-      { at: DIPOLE, dx: -78, dy: -96, align: "end" },
-      { at: new THREE.Vector3(-0.010, -0.020, 1.082), dx: 0, dy: 104, align: "middle" },
-      { at: new THREE.Vector3(0.013, -0.013, 1.028), dx: 78, dy: -96, align: "start" },
+    const LORA = new THREE.Vector3(-0.010, -0.020, 1.082);
+    /* the M9N and its three screws: this export leaves them sunk in the
+       plate, 135 degrees round from the three bosses printed for them on
+       the mount above it. this turn and lift (model space, m) set the
+       holes on the bosses and the board's underside on their tops */
+    const GPS_SEAT = new THREE.Matrix4().makeRotationZ(0.75 * Math.PI).setPosition(0.006119, 0.0427, 0.018872);
+    const GPS_SCREWS = /^Hex_socket_head_cap_screw_M3x050_x_16_[346]$/;
+
+    /* the payload's roll at each stop (rad, mod 2pi), the face it shows:
+       the sensors and Orange Pi, the same face again for the antennas,
+       the power side, the camera side */
+    const FACES = [5.483, 5.483, 2.36, 3.94];
+    const TAU = Math.PI * 2;
+    const mod = (a) => ((a % TAU) + TAU) % TAU;
+    /* the payload's own turn at each stop: the reveal brings it round
+       about a turn and a half, then each move is a full spin plus the
+       rest of the way to the next face */
+    const ROLLS = [3 * Math.PI + mod(FACES[0] - BUMP_ROLL - 3 * Math.PI)];
+    for (let k = 1; k < FACES.length; k++) {
+      ROLLS.push(ROLLS[k - 1] + TAU + mod(FACES[k] - FACES[k - 1]));
+    }
+    /* it never parks: it crawls through each stop, DRIFT rad end to end
+       (CRAWL per unit of scroll), on its exact face at the stop's middle,
+       and each spin is what the crawl leaves of the move to the next one.
+       The crawl dies away over CRAWL_OUT of the dive */
+    const DRIFT = 0.36;
+    const CRAWL = DRIFT / (PH.stop0[1] - PH.stop0[0]);
+    const CRAWL_OUT = (DIVE1 - DIVE0) / 5;
+    const SPUN = ROLLS.map((r, k) => k && r - ROLLS[k - 1] - CRAWL * (mid(PH["stop" + k]) - mid(PH["stop" + (k - 1)])));
+
+    /* what each stop calls out. hl is the part's key in the model (it
+       anchors the leader at the part's centre and lights the part up), or
+       at a fixed point; dx, dy place the label from the part in px (above
+       when dy < 0); more is the card it opens */
+    const STOPS = [
+      [
+        { hl: "opi", dx: 150, dy: -200, t: "Orange Pi 4A", d: "video encoder + compute",
+          more: "Chosen for its built-in hardware video encoder and its general computing power. The payload's cameras feed into it over USB." },
+        { hl: "feather", dx: -10, dy: -150, t: "Feather RP2040 Adalogger", d: "Adafruit · sensor logger",
+          more: "Reads the sensor boards and logs them to its microSD card. It plugs into a custom carrier board (designed in EasyEDA) that also brings in power, the Pi link and a buzzer." },
+        { hl: "bmp", dx: -150, dy: -95, t: "BMP390", d: "barometric pressure",
+          more: "Pressure and temperature. Pressure converts to altitude, giving the payload its own record of the climb and descent." },
+        { hl: "ens", dx: -110, dy: 105, t: "ENS160", d: "air quality",
+          more: "Measures VOCs and equivalent CO\u2082 through the flight." },
+        { hl: "lsm", dx: 40, dy: 150, t: "LSM6DSOX + LIS3MDL", d: "9-DoF IMU",
+          more: "Accelerometer and gyroscope (LSM6DSOX) plus magnetometer (LIS3MDL): the payload's orientation and the loads it sees through boost, coast and descent." },
+      ],
+      [
+        { at: DIPOLE, hl: "dipole", dx: -40, dy: -150, t: "915 MHz half-wave dipole", d: "RFD900x telemetry · 3 dBi",
+          more: "Downlinks live telemetry from the RFD900x radio to the ground station through the flight." },
+        { at: LORA, hl: "tracker", dx: -20, dy: 140, t: "Quarter-wave LoRa tracking antenna", d: "Featherweight GPS Tracker",
+          more: "The Featherweight tracker sends the payload's GPS position over LoRa, so it can be found after landing." },
+        { hl: "gps", dx: 60, dy: -190, t: "M9N GPS", d: "u-blox GNSS",
+          more: "A u-blox M9N receiver for the payload's position." },
+      ],
+      [
+        { hl: "pdb", dx: -20, dy: -170, t: "Custom PDB", d: "power + battery sensing",
+          more: "Custom power distribution board, designed in EasyEDA. A resistor divider scales the 3S battery down into the RP2040's analog input range, so the payload measures its own remaining battery capacity." },
+        { hl: "buck", dx: 90, dy: -110, t: "10 A, 5 V buck converter", d: "regulated 5 V rail",
+          more: "Steps the 3S battery down to a regulated 5 V rail for the payload electronics." },
+        { hl: "adc", dx: -40, dy: 130, t: "ADC to USB", d: "RunCam video capture",
+          more: "Digitizes the RunCam's analog video and brings it into the Orange Pi over USB." },
+      ],
+      [
+        { hl: "mic", dx: -40, dy: -170, t: "High-SPL microphone", d: "flight audio",
+          more: "Rated for high sound pressure levels, so it records the flight's audio without clipping. The panel over this side is lifted away to show it." },
+        { hl: ["ovcam", "ovlens"], dx: 80, dy: 140, t: "USB slow-motion camera", d: "OV sensor module",
+          more: "An OmniVision-sensor slow-motion camera module, feeding the Orange Pi over USB. The bracket over it is lifted away with the panel." },
+        { hl: ["runcam1", "runcam2"], dx: -60, dy: 130, t: "Upward + downward RunCams", d: "two views of the flight",
+          more: "Two RunCams: one looks up the airframe, one looks down it." },
+      ],
     ];
+
+    /* the labels, their leaders (one per anchor) and their cards */
+    const coRoot = document.querySelector(".callouts");
+    const coG = coRoot.querySelector("g");
+    const SVGNS = "http://www.w3.org/2000/svg";
+    const HL_COLOR = new THREE.Color(0xff5a1f);
+    const HL_AT = {};                       // part key -> its centre, model space
+    /* the stops show their parts as they are and the rest of the payload
+       as a wireframe of its CAD edges: every payload mesh is in a group (its
+       part's key, or "rest") with materials of its own to fade, and a set of
+       edge lines to fade in */
+    const groupMats = {};                   // group -> its solid materials
+    const edgeMats = {};                    // group -> the line material of its edges
+    const outlineMats = {};                 // group -> the material of its outlines
+    const wireMeshes = [];                  // payload meshes that get edges
+    /* a fade has to read as one layer: with no depth to stop them a closed
+       part shows both its walls and a stack shows all its parts, so the thick
+       things hang on long after the thin ones are gone. So while a mesh fades
+       a copy of it lays down its depth first and only the nearest surface
+       draws, at the fade's own alpha. The copy is a clone as the same shader
+       lands on the same depth, to the bit. The transparent queue runs: the
+       glazes of the parts that stay, or that depth would hide them until the
+       fade ends; the lines, under the surfaces that fade off them; the fading
+       parts; their glazes, see-through at rest, so with no depth pass; the
+       plate; the shells, last, or their depth would hide all the rest. A
+       mesh's depth draws at the order just before it */
+    const ORDER = { stays: -3, lines: -2, glaze: 1, plate: 3, shell: 5 };
+    const depthOf = new Map();              // a fading material -> its depth copy
+    const glazeMeshes = [];                 // payload glazes, but for the panel's
+    const fadeDepth = (m, a) => {
+      const d = depthOf.get(m);
+      if (d) d.visible = a > 0.001 && a < 0.999;
+    };
+    const coItems = STOPS.flatMap((list, k) => list.map((c) => {
+      const el = document.createElement("div");
+      el.className = "co";
+      el.innerHTML = '<div class="t"></div><div class="d"></div><div class="more"></div>';
+      el.querySelector(".t").textContent = c.t;
+      el.querySelector(".d").textContent = c.d;
+      el.querySelector(".more").textContent = c.more;
+      coRoot.append(el);
+      const keys = [].concat(c.hl || []);
+      const legs = Array.from({ length: c.at ? 1 : keys.length }, () => {
+        const pl = document.createElementNS(SVGNS, "line");
+        const dot = document.createElementNS(SVGNS, "circle");
+        dot.setAttribute("r", "2.5");
+        dot.style.fill = "#" + HL_COLOR.getHexString();
+        dot.style.stroke = "none";
+        coG.append(pl, dot);
+        return { pl, dot };
+      });
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-expanded", "false");
+      el.setAttribute("aria-hidden", "true");
+      el.tabIndex = -1;
+      const item = { ...c, k, keys, el, legs, hover: false, live: false };
+      item.open = (on) => {
+        el.classList.toggle("open", on);
+        el.setAttribute("aria-expanded", String(on));
+        item.hover = on;
+      };
+      /* a mouse opens the card on hover; a tap, a pen or a screen reader's
+         click toggles it; the keyboard opens it on focus and Enter/Space
+         toggles it. A press also focuses the label, so focus that comes
+         with a press doesn't open it as well (the click decides) */
+      let pointer = "", focusedAt = -1;
+      el.addEventListener("pointerdown", (e) => { pointer = e.pointerType; });
+      el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") item.open(true); });
+      el.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") item.open(false); });
+      el.addEventListener("focus", () => {
+        if (!pointer) { item.open(true); focusedAt = performance.now(); }
+      });
+      el.addEventListener("click", () => {
+        /* a screen reader may focus and click in one go: keep that open */
+        if (pointer !== "mouse" && !(item.hover && performance.now() - focusedAt < 80)) item.open(!item.hover);
+        pointer = "";
+      });
+      el.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        item.open(!item.hover);
+      });
+      el.addEventListener("blur", () => { item.open(false); pointer = ""; });
+      return item;
+    }));
 
     const payBox = new THREE.Box3();
     let payCz = 0, payLen = 0.5;
+
+    /* the ADC's green board has no tag: in the CAD it hangs off the root,
+       not the blue board's tree. Its PCB, pads, chip and can are colours
+       nothing else in the CAD uses */
+    const ADC_BOARD = /^(0\.349020_0\.701961_0\.505882|0\.929412_0\.831373_0\.545098|0\.396078_0\.396078_0\.423529|0\.866667_0\.874510_0\.898039)_/;
 
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
@@ -1059,6 +1112,12 @@
         const drop = [];
         g.scene.traverse((o) => { if (/^Acrylic_Runcam_Cover/.test(o.name)) drop.push(o); });
         drop.forEach((o) => o.removeFromParent());
+        /* parts the stops call out carry their key in their material name */
+        g.scene.traverse((o) => {
+          const key = o.isMesh && (o.material.name || "").split("_hl_")[1];
+          if (key) o.userData.hl = key;
+          else if (o.isMesh && ADC_BOARD.test(o.material.name)) o.userData.hl = "adc";
+        });
         restyle(g.scene);
         g.scene.updateMatrixWorld(true);
         /* the CAD mesh has no UVs: wrap the carbon weave cylindrically */
@@ -1183,28 +1242,76 @@
         if (!isShell) return;
         const cl = (Array.isArray(o.material) ? o.material[0] : o.material).clone();
         cl.transparent = true;
+        cl.forceSinglePass = true;
         o.material = cl;
+        o.renderOrder = ORDER.shell;
         shellMeshes.push(o);
         shellMats.push(cl);
       });
 
-      /* the plate the GPS board sits in (its own material in the model)
-         goes see-through with the shells, so the board shows inside it */
+      /* the payload's parts: the mount plate goes see-through with the
+         shells; the panel over the camera side can lift away (both fade to
+         wireframe under their own rules); everything else gets materials of
+         its group */
+      const wireCache = new Map();
       gltfs[0].scene.traverse((o) => {
-        if (!o.isMesh || !(o.material.name || "").includes("_gps_mount")) return;
-        o.material = o.material.clone();
-        o.material.transparent = true;
-        mountMats.push(o.material);
+        if (!o.isMesh || shellMeshes.includes(o)) return;
+        const key = o.userData.hl;
+        o.userData.group = key && key !== "mount" && key !== "panel" ? key : "rest";
+        wireMeshes.push(o);
+        if (o.material.transparent) {
+          o.userData.glaze = true;
+          o.renderOrder = ORDER.glaze;
+          if (key !== "panel") glazeMeshes.push(o);
+        }
+        if (key === "mount" || key === "panel") {
+          o.material = o.material.clone();
+          o.material.transparent = true;
+          o.material.forceSinglePass = true;
+          if (key === "mount") {
+            mountMats.push(o.material);
+            o.renderOrder = ORDER.plate;
+          } else {
+            o.userData.base = { opacity: o.material.opacity, depthWrite: o.material.depthWrite };
+            panelMeshes.push(o);
+          }
+          return;
+        }
+        const ck = o.material.uuid + "|" + o.userData.group;
+        let m = wireCache.get(ck);
+        if (!m) {
+          m = o.material.clone();
+          m.forceSinglePass = true;
+          m.userData.base = { opacity: m.opacity, transparent: m.transparent, depthWrite: m.depthWrite };
+          wireCache.set(ck, m);
+          (groupMats[o.userData.group] ||= []).push(m);
+        }
+        o.material = m;
       });
 
       /* the payload alone: everything in section 1 that stays after the fade */
       const s1 = gltfs[0].scene, s1Parent = s1.parent;
       s1Parent.remove(s1);
+      const gpsParts = [];
+      s1.traverse((o) => {
+        if (o.isMesh && (o.userData.hl === "gps" || GPS_SCREWS.test(o.parent.name))) gpsParts.push(o);
+      });
+      for (const o of gpsParts) {
+        s1.attach(o);                       // the screws sit under the CAD's own frames
+        o.applyMatrix4(GPS_SEAT);
+      }
       s1.updateMatrixWorld(true);
       const shellSet = new Set(shellMeshes);
       s1.traverse((o) => {
         if (o.isMesh && !shellSet.has(o)) payBox.expandByObject(o);
       });
+      const hlBox = {};
+      s1.traverse((o) => {
+        if (o.isMesh && o.userData.hl && !shellSet.has(o)) {
+          (hlBox[o.userData.hl] ||= new THREE.Box3()).expandByObject(o);
+        }
+      });
+      for (const key in hlBox) HL_AT[key] = hlBox[key].getCenter(new THREE.Vector3());
       s1Parent.add(s1);
       payCz = (payBox.min.z + payBox.max.z) / 2;
       payLen = payBox.max.z - payBox.min.z;
@@ -1217,6 +1324,7 @@
       cz = boxes.map((b) => (b.min.z + b.max.z) / 2);
       ready = true;
       layout();
+      buildEdges();                         // in the background, long before the first stop
     }).catch((e) => console.error("rocket load failed", e));
 
     const clamp01 = (v) => Math.min(1, Math.max(0, v));
@@ -1232,12 +1340,133 @@
     }
 
     let baseDist = 6;
-    const flightEl = document.querySelector(".flight");
-    const flightHead = [...flightEl.querySelectorAll("h2, .lede")];
-    const boxEls = [...flightEl.querySelectorAll(".box")];
+    /* a mesh's CAD edges: the export splits its vertices at creases, so an
+       edge that only one triangle uses is a crease or a boundary */
+    function featureEdges(geo) {
+      const idx = geo.index.array, n = geo.attributes.position.count;
+      /* every triangle edge as one number, sorted: an edge that appears
+         once in the run is used by one triangle only */
+      const keys = new Float64Array(idx.length);
+      for (let t = 0; t < idx.length; t += 3) {
+        for (let e = 0; e < 3; e++) {
+          const a = idx[t + e], b = idx[t + (e + 1) % 3];
+          keys[t + e] = a < b ? a * n + b : b * n + a;
+        }
+      }
+      keys.sort();
+      const out = new Uint32Array(keys.length * 2);
+      let m = 0;
+      for (let i = 0; i < keys.length; ) {
+        let j = i + 1;
+        while (j < keys.length && keys[j] === keys[i]) j++;
+        if (j - i === 1) { out[m++] = Math.floor(keys[i] / n); out[m++] = keys[i] % n; }
+        i = j;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", geo.attributes.position);
+      g.setIndex(new THREE.BufferAttribute(out.slice(0, m), 1));
+      return g;
+    }
+    /* a mesh's curved faces, the ones with an outline to draw: the vertices
+       of a flat face all carry one normal, and its edges are lines already */
+    function curvedFaces(geo) {
+      const idx = geo.index.array, nrm = geo.attributes.normal;
+      const same = (a, b) => nrm.getX(a) === nrm.getX(b) && nrm.getY(a) === nrm.getY(b) && nrm.getZ(a) === nrm.getZ(b);
+      const out = new Uint32Array(idx.length);
+      let m = 0;
+      for (let t = 0; t < idx.length; t += 3) {
+        const a = idx[t], b = idx[t + 1], c = idx[t + 2];
+        if (same(a, b) && same(a, c)) continue;
+        out[m++] = a; out[m++] = b; out[m++] = c;
+      }
+      if (!m) return null;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", geo.attributes.position);
+      g.setAttribute("normal", geo.attributes.normal);
+      g.setIndex(new THREE.BufferAttribute(out.slice(0, m), 1));
+      g.boundingSphere = geo.boundingSphere;
+      return g;
+    }
+    /* a curved body's outline is no edge of its mesh, so the lines lose it:
+       a tapered antenna has no crease to draw at all. This draws it on the
+       surface instead: N.V falls to 0 where the surface turns away from the
+       view, and N.V over its own slope on screen is about the distance to
+       that turn in px, so the line keeps its width at any curvature or zoom.
+       Both sides of the mesh are drawn, as on a coarse mesh the turn can fall
+       on a triangle facing away, but only the side of the turn facing the
+       view is inked: the front and back of a body land on the same pixels.
+       That one line takes two coats, the weight of the lines around it, as
+       featureEdges gives a crease twice, once from each of its sides */
+    const outlineMat = () => new THREE.ShaderMaterial({
+      uniforms: { color: { value: new THREE.Color(0x1b1c1e) }, opacity: { value: 0 } },
+      vertexShader: `
+        varying vec3 vN, vV;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vN = normalMatrix * normal;
+          vV = -mv.xyz;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        uniform vec3 color;
+        uniform float opacity;
+        varying vec3 vN, vV;
+        void main() {
+          float d = dot(normalize(vN), normalize(vV));
+          float px = d / max(length(vec2(dFdx(d), dFdy(d))), 1e-6);
+          float a = opacity * smoothstep(-1.0, 0.0, px) * (1.0 - smoothstep(1.4, 2.6, px));
+          if (a < 0.01) discard;
+          gl_FragColor = vec4(color, a * (2.0 - a));
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      extensions: { derivatives: true },
+      transparent: true, depthWrite: false, side: THREE.DoubleSide, visible: false,
+    });
+    function addDepth(o) {
+      if (!depthOf.has(o.material)) {
+        const d = o.material.clone();
+        d.colorWrite = false;
+        d.transparent = d.depthWrite = true;
+        d.visible = false;
+        depthOf.set(o.material, d);
+      }
+      const copy = new THREE.Mesh(o.geometry, depthOf.get(o.material));
+      copy.renderOrder = o.renderOrder - 1;
+      o.add(copy);
+    }
+    /* in slices of a couple of dozen ms, so the page keeps scrolling */
+    async function buildEdges() {
+      let slice = performance.now();
+      const curved = new Map();             // the CAD's parts share their geometry
+      shellMeshes.forEach(addDepth);
+      for (const o of wireMeshes) {
+        const group = o.userData.group;
+        edgeMats[group] ||= new THREE.LineBasicMaterial({
+          color: 0x1b1c1e, transparent: true, opacity: 0, depthWrite: false, visible: false,
+        });
+        outlineMats[group] ||= outlineMat();
+        const lines = new THREE.LineSegments(featureEdges(o.geometry), edgeMats[group]);
+        lines.renderOrder = ORDER.lines;
+        o.add(lines);
+        if (!curved.has(o.geometry)) curved.set(o.geometry, curvedFaces(o.geometry));
+        if (curved.get(o.geometry)) {
+          const outline = new THREE.Mesh(curved.get(o.geometry), outlineMats[group]);
+          outline.renderOrder = ORDER.lines;
+          o.add(outline);
+        }
+        if (!o.userData.glaze) addDepth(o);
+        if (performance.now() - slice > 24) {
+          await new Promise((r) => setTimeout(r));
+          slice = performance.now();
+        }
+      }
+    }
+
     function layout() {
       const w = stage.clientWidth, h = stage.clientHeight;
       lastBh = 0;
+      lastTick = -1;                       // redraw at the new size
       telem.width = w * 2;
       telem.height = 300;
       renderer.setSize(w, h, false);
@@ -1249,7 +1478,7 @@
 
     let smoothP = scrollP();
     let lastBh = 0;
-    let lastTick = -1;
+    let lastTick = -1, lastCamOn = false;
     /* the HUD reads the flight at the frame on screen: frame q is
        T+EJECT_T + q/30 s (the footage is 30 fps). ZEN is the camera's own
        look direction, straight down (180) panning up to 5 deg, exactly the
@@ -1271,25 +1500,36 @@
     const telem = document.querySelector("canvas.telem");
     const tg = telem.getContext("2d");
     const v = new THREE.Vector3();
+    const aim = new THREE.Vector3();
+    /* the sweep: a straight line in, a small rounded turn onto the axis,
+       a straight line down it */
+    const sweepIn = new THREE.LineCurve3(new THREE.Vector3(), new THREE.Vector3());
+    const sweepTurn = new THREE.QuadraticBezierCurve3(new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3());
+    const sweepDown = new THREE.LineCurve3(new THREE.Vector3(), new THREE.Vector3());
+    const sweepPath = new THREE.CurvePath();
+    sweepPath.curves.push(sweepIn, sweepTurn, sweepDown);
     const dotEls = [...document.querySelectorAll(".dots button")];
+    const DOT_AT = [0, mid(PH.separated), mid(PH.nose), mid(PH.stop0), SEP0];
+    const ACT_AT = [PH.split, PH.zoom, PH.reveal, PH.dive].map(mid);
+    dotEls.forEach((b, i) => { b.dataset.p = DOT_AT[i]; });
     dotEls.forEach((b) => b.addEventListener("click", () => {
       window.scrollTo({ top: parseFloat(b.dataset.p) * trackMax(), behavior: "smooth" });
     }));
 
     /* the ejection video is scroll-driven: the frame on screen is always
        the one for the page's position, so it never runs ahead of or behind
-       the scroll, and the fade into the flight summary lines up with it.
+       the scroll.
        The scroll isn't shared out evenly: each frame's slice of it is its
        weight, 1 through the plain stretches and up to 2 through the big
        moments (the ejection flash and kick, the horizon rolling through
-       the frame, the flight summary landing), so even the fastest flick
+       the frame, the last of the pan), so even the fastest flick
        slows down for them. FEED_POS[q] is frame q's place in the feed, 0..1.
        It only moves when the page does: there's no autoplay, and native
        scrolling (trackpad momentum included) is never cancelled */
     const feedWeight = (q) => 1
       + 1.0 * (q <= 10 ? 1 : Math.exp(-0.5 * ((q - 10) / 14) ** 2))   // ejection
       + 0.9 * Math.exp(-0.5 * ((q - 160) / 22) ** 2)                  // horizon
-      + 0.6 * ease(clamp01((q - 236) / 60));                            // flight summary
+      + 0.6 * ease(clamp01((q - 236) / 60));                            // the last of the pan
     const FEED_POS = [0];
     for (let q = 1; q < TIP_N; q++) FEED_POS.push(FEED_POS[q - 1] + feedWeight(q));
     for (let q = 1; q < TIP_N; q++) FEED_POS[q] /= FEED_POS[TIP_N - 1];
@@ -1313,8 +1553,7 @@
       smoothP += (target - smoothP) * SMOOTH;
       if (Math.abs(target - smoothP) < 0.0004) smoothP = target;
 
-      const pa = smoothP / PRE;
-      const act = pa < 0.15 ? 0 : pa < 0.34 ? 1 : pa < 0.5 ? 2 : pa < 0.68 ? 3 : 4;
+      const act = ACT_AT.filter((a) => smoothP >= a).length;
       dotEls.forEach((b, i) => b.classList.toggle("on", i === act));
 
       if (!ready) {
@@ -1325,15 +1564,14 @@
       const t = ease(clamp01((smoothP - HERO_END) / (SPLIT_END - HERO_END)));
       const zoomT = easeSoft(clamp01((smoothP - ZOOM0) / (ZOOM1 - ZOOM0)));
       const revT = easeSoft(clamp01((smoothP - REV0) / (REV1 - REV0)));
-      const povT = easeSoft(clamp01((smoothP - POV0) / (POV1 - POV0)));
-      const diveT = easeSoft(clamp01((smoothP - POV1) / (DIVE1 - POV1)));
-      const camOn = diveT > 0.985;          // dark in the tube: the onboard camera takes over
+      const sweep = easeSoft(clamp01((smoothP - DIVE0) / (DIVE1 - DIVE0)));
+      const camOn = sweep > 0.995;          // in the tube: the onboard camera takes over
       /* the frame is the page's position in the feed, nothing else */
       const scrollSep = clamp01((target - SEP0) / (SEP1 - SEP0));
       const qStep = camOn ? feedFrame(scrollSep) : 0;
       const sepQ = qStep / (TIP_N - 1);
       const fc = qStep / 30;                // the HUD clock: the frame on screen, 1/30 s apart
-      const renderNow = !camOn || qStep !== lastTick;
+      const renderNow = !camOn || qStep !== lastTick || !lastCamOn;
       const groundOn = false;   // Earth-captured tilt frames carry the view
 
       /* split, then held apart: the lower body stays put while the camera
@@ -1349,9 +1587,18 @@
       const tiltK = 1 - zoomT;               // straighten out for the close-up
       rocket.rotation.y = -0.22 * t * tiltK;
       rocket.rotation.x = 0.1 * t * tiltK;
-      /* pod to the top, one slow turn during the reveal, lower stages spin
-         gently during the filmed separation */
-      secs[0].rotation.z = BUMP_ROLL * zoomT + Math.PI * 3.5 * revT;
+      /* the rest of the rocket holds still while the camera closes in; only
+         the pod turns, to the top. Then the payload crawls past each stop's
+         face (a full spin and the rest between stops), and the lower stages
+         spin gently during the filmed separation */
+      const outU = clamp01((smoothP - DIVE0) / CRAWL_OUT);
+      const crawled = Math.min(smoothP, DIVE0) + CRAWL_OUT * (outU - outU ** 3 + outU ** 4 / 2);
+      let face = (ROLLS[0] + CRAWL * (crawled - mid(PH.stop0))) * revT;
+      for (let k = 1; k < ROLLS.length; k++) {
+        const [a, b] = PH["spin" + k];
+        face += SPUN[k] * easeSoft(clamp01((smoothP - a) / (b - a)));
+      }
+      secs[0].rotation.z = BUMP_ROLL * zoomT + face;
 
       secs[1].rotation.z = 1.1 * sepQ;
       secs[2].rotation.z = 1.9 * sepQ;
@@ -1435,15 +1682,72 @@
         rope.geometry = ropeGeo(pts);
       }
 
+      /* each stop's callouts come in as it arrives and go before the next
+         spin; the panel over the camera side lifts away as that face comes
+         round and is back once the sweep is under way */
+      const stopVis = STOPS.map((_, k) => {
+        const [a, b] = PH["stop" + k], len = b - a;
+        return ease(clamp01((smoothP - a) / (0.3 * len))) *
+          (1 - ease(clamp01((smoothP - (b - 0.2 * len)) / (0.2 * len))));
+      });
+      const [s3a, s3b] = PH.spin3;
+      const lift = ease(clamp01((smoothP - (s3a + s3b) / 2) / ((s3b - s3a) / 2))) *
+        (1 - ease(clamp01((smoothP - DIVE0) / (0.3 * (DIVE1 - DIVE0)))));
+      /* at a stop its parts stay as they are and the rest of the payload
+         goes to wireframe; with a card open, only that card's part stays */
+      let stopK = -1, stopV = 0;
+      stopVis.forEach((sv, k) => { if (sv > stopV) { stopV = sv; stopK = k; } });
+      const opened = coItems.find((c) => c.hover && c.k === stopK);
+      const solid = new Set((opened ? [opened] : coItems.filter((c) => c.k === stopK)).flatMap((c) => c.keys));
+      const wireOf = (group) => (solid.has(group) ? 0 : stopV);
+      for (const group in groupMats) {
+        const w = wireOf(group);
+        for (const m of groupMats[group]) {
+          const b = m.userData.base;
+          m.opacity = b.opacity * (1 - w);
+          /* the shader's alpha hangs on this: it's fixed at 1 in an opaque
+             material, however low the opacity */
+          const clear = b.transparent || w > 0.001;
+          if (m.transparent !== clear) {
+            m.transparent = clear;
+            m.needsUpdate = true;
+          }
+          m.depthWrite = b.depthWrite && w < 0.01;
+          m.visible = w < 0.999;
+          fadeDepth(m, 1 - w);
+        }
+      }
+      for (const group in edgeMats) {
+        const w = wireOf(group);
+        edgeMats[group].opacity = 0.42 * w;
+        edgeMats[group].visible = w > 0.001;
+      }
+      for (const o of glazeMeshes) o.renderOrder = wireOf(o.userData.group) ? ORDER.glaze : ORDER.stays;
+      /* the outlines fade with their group's lines, exactly */
+      for (const group in outlineMats) {
+        outlineMats[group].uniforms.opacity.value = edgeMats[group].opacity;
+        outlineMats[group].visible = edgeMats[group].visible;
+      }
+      const wireRest = wireOf("rest");
+      for (const o of panelMeshes) {
+        o.material.opacity = o.userData.base.opacity * (1 - lift) * (1 - wireRest);
+        o.material.depthWrite = o.userData.base.depthWrite && lift < 0.02 && wireRest < 0.01;
+        o.visible = lift < 0.999;
+        fadeDepth(o.material, (1 - lift) * (1 - wireRest));
+      }
+
       /* nose cone + outer tube fade away to reveal the payload */
       const fade = clamp01(revT * 1.7);
       for (let k = 0; k < shellMats.length; k++) {
         shellMats[k].opacity = 1 - fade;
-        shellMeshes[k].visible = fade < 0.98;
+        shellMeshes[k].visible = fade < 0.999;
+        fadeDepth(shellMats[k], 1 - fade);
       }
+      /* the plate is one layer too: 0.44 of it reads as its two walls at 0.25 */
       for (const m of mountMats) {
-        m.opacity = 1 - 0.75 * fade;
+        m.opacity = (1 - 0.5625 * fade) * (1 - wireRest);
         m.depthWrite = fade < 0.02;
+        fadeDepth(m, m.opacity);
       }
 
       /* camera: wide -> nose close-up -> onboard camera POV (locked) */
@@ -1461,18 +1765,43 @@
       dist += (dPay - dist) * revT;
       const yOff = 0.027 * 2 * dPay * vHalf * revT;
       const camY = 0.045 * zoomT * (1 - revT) + yOff;
-      const povX = asm.position.x - 0.655 + (camOn ? 0 : DIVE * diveT), povY = 0.012, povZ = 0.015;
-      camera.position.set(
-        tx + (povX - tx) * povT,
-        camY + (povY - camY) * povT,
-        dist + (povZ - dist) * povT
-      );
-      camera.lookAt(
-        tx + (povX + 1 - tx) * povT,
-        yOff + (povY - yOff) * povT,
-        povZ * povT
-      );
-      camera.fov = 32 + 30 * povT;
+      /* then one sweep: a straight line in to the middle of the payload's
+         bottom, where the onboard camera sits (coming in below the payload),
+         a small rounded turn onto the axis there, and straight on down the
+         axis into the lower tube.
+         Its aim slides from the payload to the middle of the tube's mouth,
+         then keeps a little ahead down the axis, so the tube stays centred
+         all the way in. One curve, no stop */
+      const lens = asm.position.x - 0.655, povY = 0.012, povZ = 0.015;
+      let turnW = 0, depth = 0;
+      if (camOn) {
+        turnW = depth = 1;
+        camera.position.set(lens, povY, povZ);
+        camera.lookAt(lens + 1, povY, povZ);
+      } else if (sweep > 0) {
+        const BEND = 0.06;                     // m: radius of the turn onto the axis
+        aim.set(lens, povY, povZ);
+        sweepIn.v1.set(tx, camY, dist);
+        sweepIn.v2.copy(sweepIn.v1).sub(aim).setLength(BEND).add(aim);
+        sweepTurn.v0.copy(sweepIn.v2);
+        sweepTurn.v1.copy(aim);
+        sweepTurn.v2.set(lens + BEND, povY, povZ);
+        sweepDown.v1.copy(sweepTurn.v2);
+        sweepDown.v2.set(lens + DIVE, povY, povZ);
+        for (const c of sweepPath.curves) c.updateArcLengths();
+        sweepPath.updateArcLengths();
+        sweepPath.getPointAt(sweep, camera.position);
+        turnW = easeSoft(clamp01(sweep / 0.55));
+        depth = clamp01((camera.position.x - lens) / DIVE);
+        const mouth = lens + DIVE - (0.813 - 0.655);
+        aim.set(Math.max(mouth, camera.position.x + 0.15), povY, povZ);
+        v.set(tx, yOff, 0).lerp(aim, turnW);
+        camera.lookAt(v);
+      } else {
+        camera.position.set(tx, camY, dist);
+        camera.lookAt(tx, yOff, 0);
+      }
+      camera.fov = 32 + 30 * turnW;
       camera.updateProjectionMatrix();
 
       /* ground at the sim's exact AGL altitude and hang angle */
@@ -1485,17 +1814,18 @@
         const th = (90 - fdAt(fd.zen, mQ)) * Math.PI / 180;
         const altS = Math.max(50, fdAt(fd.alt, mQ) * 0.3048) * SCN;
         const dLat = (fdAt(fd.latd, mQ) - fdAt(fd.latd, EJECT_T)) * 0.3048 * SCN;
-        groundRig.position.set(povX, povY, povZ);
+        groundRig.position.set(lens, povY, povZ);
         groundRig.rotation.z = -th;          // true vertical swings screen-down
         ground.position.set(altS, 0, dLat);  // image centre = nadir at real AGL
       }
 
       /* the bore is dark; the filmed separation is black-and-white */
-      renderer.toneMappingExposure = 0.75 - 0.56 * diveT + 0.22 * sepQ + 2.5 * flashT;
-      /* black from the tube's mouth until the charge fires */
-      darkEl.style.opacity = (camOn ? (qStep === 0 ? 1 : 0) : clamp01((diveT - 0.6) / 0.35)).toFixed(3);
+      renderer.toneMappingExposure = 0.75 - 0.56 * ease(depth) + 0.22 * sepQ + 2.5 * flashT;
+      /* dark, not black, from the tube's mouth until the charge fires */
+      darkEl.style.opacity = (0.6 * (camOn ? (qStep === 0 ? 1 : 0) : ease(clamp01((depth - 0.45) / 0.55)))).toFixed(3);
       sepLight.intensity = 2.4 * sepQ;
-      const film = camOn ? `grayscale(1) contrast(1.18) brightness(${(1 + 1.2 * flashT).toFixed(3)})` : "";
+      const film = camOn ? `grayscale(1) contrast(1.18) brightness(${(1 + 1.2 * flashT).toFixed(3)})`
+        : depth > 0 ? `grayscale(${depth.toFixed(3)})` : "";
       canvas.style.filter = film;
       cloudsEl.style.filter = film;
       smokeEl.style.filter = film;
@@ -1510,29 +1840,8 @@
       }
 
       /* lattice-style telemetry strip, time-driven, camera view only */
-      /* once the pan has carried even +10 deg of sky above the horizon out
-         of the bottom of the frame (frame FADE0: the 25.7 deg tall view is
-         then centred 23 deg up), the feed fades into the page so the
-         section below follows on seamlessly. It runs off the frame on
-         screen, not the scroll, so a fast scroll can't fade it early: the
-         pan always gets there first, and only the last frame is fully
-         faded */
-      const fadeT = clamp01((qStep - FADE0) / (TIP_N - 1 - FADE0));
-      fadeEl.style.opacity = camOn ? fadeT.toFixed(3) : "0";
       telem.style.opacity = camOn ? "1" : "0";
       creditEl.style.opacity = camOn ? "1" : "0";
-      /* the flight summary comes up with the paper: the heading through the
-         middle of the fade, then each card, left to right and row by row,
-         rising in a little; the last is fully in on the last frame */
-      const fl = camOn ? fadeT : 0;
-      flightEl.style.visibility = fl > 0 ? "visible" : "hidden";
-      flightEl.classList.toggle("live", fl > 0.98);
-      for (const el of flightHead) el.style.opacity = clamp01((fl - 0.3) / 0.3).toFixed(3);
-      boxEls.forEach((el, k) => {
-        const o = clamp01((fl - 0.4 - 0.35 * k / (boxEls.length - 1)) / 0.25);
-        el.style.opacity = o.toFixed(3);
-        el.style.transform = `translateY(${((1 - o) * 22).toFixed(1)}px)`;
-      });
       if (camOn) {
         const hd = hudTable();
         const alt = hd.alt[qStep], vel = hd.vel[qStep], rr = hd.zen[qStep];
@@ -1585,46 +1894,80 @@
         graph(m + 350, py, 92, ph, hd.zen, "ZEN °", rr.toFixed(1));
       }
 
-      const coT = easeSoft(clamp01((revT - 0.82) / 0.18)) * (1 - easeSoft(clamp01(povT / 0.15)));
-      coG.style.opacity = coT.toFixed(3);
-      if (coT > 0.01) {
+      /* the stops' callouts: leaders from each part to its label, the
+         parts lit with them (fully while their card is open) */
+      if (stopVis.some((s) => s > 0.01)) {
         rocket.updateMatrixWorld(true);
         camera.updateMatrixWorld();
-        const cw = stage.clientWidth, ch = stage.clientHeight;
-        CALLOUTS.forEach((c, k) => {
-          v.copy(c.at).applyMatrix4(secs[0].matrixWorld).project(camera);
-          const ax = (v.x * 0.5 + 0.5) * cw, ay = (-v.y * 0.5 + 0.5) * ch;
-          /* keep each label fully on screen: shift its elbow inward when the
-             leader would push the text past an edge */
-          const lw = coEls[k].offsetWidth;
-          let ex = ax + c.dx;
-          const ey = ay + c.dy;
-          if (c.align === "end") ex = Math.max(ex, lw + 18);
-          else if (c.align === "start") ex = Math.min(ex, cw - lw - 60);
-          const pts = c.align === "middle"
-            ? `${ax},${ay} ${ax},${ey}`
-            : `${ax},${ay} ${ax},${ey} ${ex},${ey}`;
-          coLines[k].pl.setAttribute("points", pts);
-          coLines[k].dot.setAttribute("cx", ax.toFixed(1));
-          coLines[k].dot.setAttribute("cy", ay.toFixed(1));
-          const el = coEls[k];
-          el.style.opacity = coT.toFixed(3);
-          if (c.align === "end") {
-            el.style.left = (ex - 6) + "px"; el.style.top = ey + "px";
-            el.style.transform = "translate(-100%, -50%)"; el.style.textAlign = "right";
-          } else if (c.align === "start") {
-            el.style.left = (ex + 6) + "px"; el.style.top = ey + "px";
-            el.style.transform = "translate(0, -50%)"; el.style.textAlign = "left";
-          } else {
-            el.style.left = ax + "px"; el.style.top = (ey + 6) + "px";
-            el.style.transform = "translate(-50%, 0)"; el.style.textAlign = "center";
+      }
+      const cw = stage.clientWidth, ch = stage.clientHeight;
+      const placed = [];
+      for (const c of coItems) {
+        const vis = stopVis[c.k];
+        const anchors = c.at ? [c.at] : c.keys.map((key) => HL_AT[key]).filter(Boolean);
+        const on = vis > 0.01 && anchors.length > 0;
+        c.el.style.opacity = on ? vis.toFixed(3) : "0";
+        const live = on && vis > 0.6;
+        if (live !== c.live) {
+          c.live = live;
+          c.el.classList.toggle("live", live);
+          c.el.tabIndex = live ? 0 : -1;
+          if (live) c.el.removeAttribute("aria-hidden");
+          else c.el.setAttribute("aria-hidden", "true");
+          if (!live && c.hover) c.open(false);
+        }
+        if (!on) {
+          for (const g of c.legs) g.pl.style.opacity = g.dot.style.opacity = "0";
+          continue;
+        }
+        const pts = anchors.map((p) => {
+          v.copy(p).applyMatrix4(secs[0].matrixWorld).project(camera);
+          return [(v.x * 0.5 + 0.5) * cw, (-v.y * 0.5 + 0.5) * ch];
+        });
+        const bx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+        const by = c.dy < 0 ? Math.min(...pts.map((p) => p[1])) : Math.max(...pts.map((p) => p[1]));
+        const half = c.el.offsetWidth / 2;
+        const lx = Math.min(Math.max(bx + c.dx, half + 12), cw - half - 52);
+        const ly = Math.min(Math.max(by + c.dy, 40), ch - 40);
+        const lh = c.el.offsetHeight;
+        if (!c.hover) { c.closedH = lh; c.closedHalf = half; }
+        const h = c.closedH || lh, up = c.dy < 0;
+        /* y: where the closed label's top sits */
+        placed.push({ c, pts, vis, lx, lh, h, half: c.closedHalf || half, up, y: up ? ly - 6 - h : ly + 6 });
+      }
+      /* labels that would overlap (on narrow screens) are pushed apart, away
+         from the payload, nearest first; an open card counts as its label */
+      for (const up of [true, false]) {
+        const side = placed.filter((p) => p.up === up).sort((p, q) => (up ? q.y - p.y : p.y - q.y));
+        side.forEach((p, i) => {
+          for (let j = 0; j < i; j++) {
+            const q = side[j];
+            if (Math.abs(p.lx - q.lx) >= p.half + q.half + 8) continue;
+            p.y = up ? Math.min(p.y, q.y - 6 - p.h) : Math.max(p.y, q.y + q.h + 6);
           }
         });
-      } else {
-        coEls.forEach((el) => { el.style.opacity = "0"; });
+      }
+      for (const p of placed) {
+        const { c, pts, vis, lx, lh } = p;
+        /* an open card grows away from its leader, and keeps on screen even
+           if that means covering things */
+        const top = Math.min(Math.max(p.up ? p.y + p.h - lh : p.y, 8), ch - lh - 8);
+        const ly = p.up ? top + lh + 6 : top - 6;      // the leaders end at the label
+        c.legs.forEach((g, i) => {
+          if (!pts[i]) { g.pl.style.opacity = g.dot.style.opacity = "0"; return; }
+          const [px, py] = pts[i];
+          g.pl.setAttribute("x1", px.toFixed(1)); g.pl.setAttribute("y1", py.toFixed(1));
+          g.pl.setAttribute("x2", lx.toFixed(1)); g.pl.setAttribute("y2", ly.toFixed(1));
+          g.dot.setAttribute("cx", px.toFixed(1)); g.dot.setAttribute("cy", py.toFixed(1));
+          g.pl.style.opacity = g.dot.style.opacity = vis.toFixed(3);
+        });
+        c.el.style.left = lx + "px";
+        c.el.style.top = top + "px";
+        c.el.style.transform = "translate(-50%, 0)";
       }
 
       hint.style.opacity = String(smoothP < 0.01 ? 1 : 0);
+      dotsEl.classList.toggle("shown", smoothP >= 0.01);
 
       /* labels under each section */
       const w = stage.clientWidth, h = stage.clientHeight;
@@ -1651,6 +1994,7 @@
         renderer.render(scene, camera);
         drawSmoke(w, h);
         lastTick = qStep;
+        lastCamOn = camOn;
       }
     }
 
@@ -1663,6 +2007,7 @@
     layout();
     tick();
   </script>
+  <script type="module" src="macbook-pro-14/overlay.js?v=20261030i"></script>
   <script src="glitch.js"></script>
 </body>
 </html>
