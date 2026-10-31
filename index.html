@@ -121,8 +121,8 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* The mouse only counts on the letters themselves, descenders included:
-       title-fills.js tests it against each word's pixels */
+    /* The mouse counts on a rectangle across the word plus each letter's own
+       top and bottom: title-fills.js tests it against that shape */
     .word {
       height: calc(176 * var(--u));
       pointer-events: none;
@@ -624,7 +624,7 @@
     paintBackground();
     requestAnimationFrame(tick);
   </script>
-  <script type="module" src="title-fills.js?v=20261030w"></script>
+  <script type="module" src="title-fills.js?v=20261030y"></script>
   <script src="glitch.js"></script>
 </body>
 </html>

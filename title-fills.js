@@ -248,7 +248,50 @@ class Fill {
       width: `${cw / per}px`,
       height: `${ch / per}px`,
     });
-    this.letters = { data: crop.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, cw, ch).data, cw, ch };
+    /* the selectable shape: one rectangle across the word at the height of its
+       lowercase letters, plus a block for whatever sticks out of it, so the
+       ascenders and the tail of the j count too */
+    const pixels = crop.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, cw, ch).data;
+    const letters = [...word].map((_, i) => {
+      const left = Math.max(0, Math.round((this.text.getStartPositionOfChar(i).x + pad) * scale) - x0);
+      const right = Math.min(cw, Math.round((this.text.getEndPositionOfChar(i).x + pad) * scale) - x0);
+      let top = ch, bottom = 0;
+      for (let y = 0; y < ch; y++) {
+        for (let x = left; x < right; x++) {
+          if (pixels[(y * cw + x) * 4 + 3] < 40) continue;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          break;
+        }
+      }
+      return { left, right, top, bottom };
+    }).filter((l) => l.bottom >= l.top);
+    const middle = (values) => values.sort((a, b) => a - b)[values.length >> 1];
+    const top = middle(letters.map((l) => l.top));
+    const bottom = middle(letters.map((l) => l.bottom));
+    const blocks = [];
+    for (const [from, to] of [[0, top], [bottom + 1, ch]]) {
+      let block = null;
+      for (let x = 0; x <= cw; x++) {
+        let first = -1, last = -1;
+        for (let y = from; x < cw && y < to; y++) {
+          if (pixels[(y * cw + x) * 4 + 3] < 40) continue;
+          if (first < 0) first = y;
+          last = y;
+        }
+        if (first < 0) {
+          block = null;
+        } else if (block) {
+          block.right = x + 1;
+          block.top = Math.min(block.top, first);
+          block.bottom = Math.max(block.bottom, last);
+        } else {
+          block = { left: x, right: x + 1, top: first, bottom: last };
+          blocks.push(block);
+        }
+      }
+    }
+    this.shape = { cw, top, bottom, blocks };
     const gl = this.gl;
     if (!gl) return;
     gl.viewport(0, 0, cw, ch);
@@ -257,22 +300,18 @@ class Fill {
     this.draw(0);
   }
 
-  /* is this page point on the letters, within `slop` CSS px? */
+  /* is this page point inside the word's selectable shape, within `slop` CSS px? */
   covers(x, y, slop) {
-    if (!this.letters) return false;
-    const { data, cw, ch } = this.letters;
+    if (!this.shape) return false;
+    const { cw, top, bottom, blocks } = this.shape;
     const box = this.canvas.getBoundingClientRect();
     const scale = cw / box.width;
-    const near = Math.ceil(slop * scale);
-    const px = Math.round((x - box.left) * scale);
-    const py = Math.round((y - box.top) * scale);
-    for (let dy = -near; dy <= near; dy += Math.max(1, near)) {
-      for (let dx = -near; dx <= near; dx += Math.max(1, near)) {
-        const qx = px + dx, qy = py + dy;
-        if (qx >= 0 && qy >= 0 && qx < cw && qy < ch && data[(qy * cw + qx) * 4 + 3] > 40) return true;
-      }
-    }
-    return false;
+    const near = slop * scale;
+    const px = (x - box.left) * scale;
+    const py = (y - box.top) * scale;
+    if (px < -near || px > cw + near) return false;
+    if (py >= top - near && py <= bottom + near) return true;
+    return blocks.some((b) => px >= b.left - near && px < b.right + near && py >= b.top - near && py <= b.bottom + near);
   }
 
   draw(seconds) {
@@ -335,7 +374,7 @@ for (const fill of fills) {
   line.addEventListener("blur", () => set(fill, false));
 }
 
-/* The words themselves don't take the mouse: it's tested against their pixels */
+/* The words themselves don't take the mouse: it's tested against their shapes */
 const under = (x, y, slop) => (body.dataset.open || document.documentElement.dataset.phase ? null : fills.find((f) => f.covers(x, y, slop)) || null);
 let hovered = null;
 let leaving = 0;
