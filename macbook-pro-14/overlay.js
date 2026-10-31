@@ -8,8 +8,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 /* where this section starts in the rocket page's scroll, 0..1 of its total:
-   its "dark" stretch, 1370 of 1930svh. Keep in step with STRETCHES there */
-const ROCKET_FROM = 1370 / 1930;
+   its "dark" stretch, 1317.5 of 1877.5svh. Keep in step with STRETCHES there */
+const ROCKET_FROM = 1317.5 / 1877.5;
 const CUT_IN = 0.012;                // the cut to the Mac's black display takes this much
 const LOAD_AT = 0.02;                 // the model loads at the first bit of scroll, to be ready in time
 
