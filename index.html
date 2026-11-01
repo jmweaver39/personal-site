@@ -10,8 +10,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=League+Gothic&display=swap" rel="stylesheet">
   <script>
-    /* The rocket hands back with a #home it no longer needs */
-    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    /* The opening plays once a visit, and never on the way back from another page.
+       The timer shows the home screen anyway if opening.js doesn't arrive */
+    (function () {
+      var root = document.documentElement;
+      var seen = false;
+      try {
+        seen = sessionStorage.getItem("opening-seen") === "1";
+        sessionStorage.setItem("opening-seen", "1");
+      } catch (e) {}
+      var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var inside = document.referrer.indexOf(location.origin + "/") === 0;
+      if (!seen && !still && !inside && location.hash !== "#home") {
+        root.dataset.phase = "typing";
+        setTimeout(function () {
+          if (root.dataset.phase === "typing") delete root.dataset.phase;
+        }, 5000);
+      }
+      /* The rocket hands back with a #home it no longer needs */
+      if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    })();
   </script>
   <script src="wipe.js?v=20261030w"></script>
   <style>
@@ -82,7 +100,7 @@
     .stage {
       position: absolute;
       left: 50%;
-      top: 50%;
+      top: calc(50% - 64 * var(--u));   /* the words and logos together are centred */
       width: 0;
       height: 0;
     }
@@ -373,6 +391,38 @@
       top: calc(360 * var(--u));
     }
 
+    /* The opening: the name it types, and the letters and copies it adds */
+    #typed {
+      position: absolute;
+      left: 0;
+      top: calc(64 * var(--u));   /* back to the window's exact centre */
+      margin: 0;
+      transform: translate(-50%, -50%);
+      font: 400 25px/1.3 "IBM Plex Mono", ui-monospace, monospace;
+      white-space: nowrap;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #typed .ch {
+      display: inline-block;
+      white-space: pre;
+    }
+
+    [data-phase="typing"] .entry,
+    [data-phase="typing"] .links {
+      visibility: hidden;
+    }
+
+    #layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .entry,
       .slide,
@@ -620,6 +670,7 @@
     requestAnimationFrame(tick);
   </script>
   <script type="module" src="title-fills.js?v=20261030y"></script>
+  <script type="module" src="opening.js?v=20261031a"></script>
   <script src="glitch.js"></script>
 </body>
 </html>
