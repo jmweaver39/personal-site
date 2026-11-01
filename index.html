@@ -391,12 +391,6 @@
       top: calc(360 * var(--u));
     }
 
-    /* Return: the other word and logos don't slide back, opening.js glitches them in */
-    [data-closing] .entry,
-    [data-closing] .links {
-      transition: none;
-    }
-
     /* The opening: the name it types, and the letters and copies it adds */
     #typed {
       position: absolute;
@@ -527,12 +521,13 @@
     const CELLS_H = 900;
     const CELL = 2;        // Figma px per dither cell
     const CROSSING = 120000;
+    const BG_START = Math.random() * CROSSING * 2;   // each load starts somewhere new
     let bgCell = 1;        // CSS px per dither cell
     let bgLeft = NaN;
 
     function placeBackground(now) {
-      const phase = (now % (CROSSING * 2)) / CROSSING;
-      const p = reduce.matches ? 0 : phase < 1 ? phase : 2 - phase;
+      const phase = ((BG_START + (reduce.matches ? 0 : now)) % (CROSSING * 2)) / CROSSING;
+      const p = phase < 1 ? phase : 2 - phase;
       const dpr = devicePixelRatio || 1;
       const left = Math.round(-(CELLS_W / 2) * bgCell * (1 - p) * dpr) / dpr;
       if (left !== bgLeft) {
@@ -564,13 +559,9 @@
     }
 
     // The drawers: one open at a time, `return` backs out
-    function setOpen(name) {
+    function setOpen(name, byMouse) {
       const was = body.dataset.open;
       document.dispatchEvent(new CustomEvent("fills:clear"));
-      if (was && !name) {
-        body.dataset.closing = "";
-        requestAnimationFrame(() => requestAnimationFrame(() => delete body.dataset.closing));
-      }
       if (name) body.dataset.open = name;
       else delete body.dataset.open;
       for (const entry of entries) {
@@ -588,9 +579,9 @@
         const item = entries.find((e) => e.dataset.entry === name).querySelector(".item");
         item.focus({ preventScroll: true });
         openTimer = setTimeout(() => scramblers.get(item)(), OPEN_AT);
-      } else if (was) {
+      } else if (was && !byMouse) {
+        // Focus lights the word up, so only keyboard users get it back
         entries.find((e) => e.dataset.entry === was).querySelector(".word").focus({ preventScroll: true });
-        document.dispatchEvent(new CustomEvent("home:closed", { detail: was }));
       }
     }
 
@@ -599,7 +590,7 @@
         if (!body.dataset.open) setOpen(entry.dataset.entry);
       });
     }
-    returnEl.addEventListener("click", () => setOpen(null));
+    returnEl.addEventListener("click", (e) => setOpen(null, e.detail > 0));
     addEventListener("keydown", (e) => {
       if (e.key === "Escape" && body.dataset.open) setOpen(null);
     });
@@ -681,7 +672,7 @@
     requestAnimationFrame(tick);
   </script>
   <script type="module" src="title-fills.js?v=20261030y"></script>
-  <script type="module" src="opening.js?v=20261031b"></script>
+  <script type="module" src="opening.js?v=20261031c"></script>
   <script src="glitch.js"></script>
 </body>
 </html>
