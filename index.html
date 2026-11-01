@@ -391,6 +391,12 @@
       top: calc(360 * var(--u));
     }
 
+    /* Return: the other word and logos don't slide back, opening.js glitches them in */
+    [data-closing] .entry,
+    [data-closing] .links {
+      transition: none;
+    }
+
     /* The opening: the name it types, and the letters and copies it adds */
     #typed {
       position: absolute;
@@ -561,6 +567,10 @@
     function setOpen(name) {
       const was = body.dataset.open;
       document.dispatchEvent(new CustomEvent("fills:clear"));
+      if (was && !name) {
+        body.dataset.closing = "";
+        requestAnimationFrame(() => requestAnimationFrame(() => delete body.dataset.closing));
+      }
       if (name) body.dataset.open = name;
       else delete body.dataset.open;
       for (const entry of entries) {
@@ -580,6 +590,7 @@
         openTimer = setTimeout(() => scramblers.get(item)(), OPEN_AT);
       } else if (was) {
         entries.find((e) => e.dataset.entry === was).querySelector(".word").focus({ preventScroll: true });
+        document.dispatchEvent(new CustomEvent("home:closed", { detail: was }));
       }
     }
 
@@ -670,7 +681,7 @@
     requestAnimationFrame(tick);
   </script>
   <script type="module" src="title-fills.js?v=20261030y"></script>
-  <script type="module" src="opening.js?v=20261031a"></script>
+  <script type="module" src="opening.js?v=20261031b"></script>
   <script src="glitch.js"></script>
 </body>
 </html>

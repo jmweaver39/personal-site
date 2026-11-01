@@ -36,6 +36,8 @@ const ICON_AT = 660;     // the first icon letter splits into colour
 const ICON_STEP = 34;    // and each one after it
 const ICON_GAP = 65;     // the logo's copies start jumping this much after its letter splits
 const END = ICON_AT + (ICON_LETTERS.length - 1) * ICON_STEP + ICON_GAP + JUMPS * JUMP;
+const BACK_AT = 110;     // after return, the other word starts jumping back in
+const BACK_ICONS = 60;   // the logos start this much later
 
 const root = document.documentElement;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -310,6 +312,53 @@ async function start() {
     for (const piece of [...entries, contact]) piece.inert = false;
     delete root.dataset.phase;
   }
+}
+
+/* Pressing return brings back whatever the drawer sent away the same way: the
+   other word and the logos jump into place through the three colours */
+let stopBack = () => {};
+
+function glitchBack(name) {
+  const links = [...document.querySelector(".links").children];
+  const other = [...document.querySelectorAll(".entry")].find((entry) => entry.dataset.entry !== name);
+  const word = { svg: other.querySelector(".word svg") };
+  const layer = document.createElement("div");
+  layer.id = "layer";
+  layer.setAttribute("aria-hidden", "true");
+  document.querySelector(".stage").append(layer);
+
+  const moves = [];
+  const ctx = { layer };
+  const run = (el, frames, options) => moves.push(el.animate(frames, { easing: "linear", fill: "both", ...options }));
+  const unit = links[0].offsetWidth / 24;
+  const jumpIn = (copy, at, shove) => {
+    run(copy, [{ opacity: 0 }, { opacity: 0 }], { duration: at, fill: "backwards" });
+    run(copy, hold(jumps(shove)), { delay: at, duration: JUMPS * JUMP, fill: "forwards" });
+    run(copy, [{ opacity: 0 }, { opacity: 0 }], { delay: at + JUMPS * JUMP, duration: 1, fill: "forwards" });
+  };
+
+  CHANNELS.forEach((colour) => jumpIn(copyOf(ctx, word, colour), BACK_AT, 34 * unit));
+  run(word.svg, [{ opacity: 0 }, { opacity: 0 }], { duration: BACK_AT + JUMPS * JUMP, fill: "backwards" });
+  links.forEach((link, i) => {
+    const at = BACK_AT + BACK_ICONS + i * ICON_STEP;
+    CHANNELS.forEach((colour) => jumpIn(iconCopy(ctx, link, colour), at, 16 * unit));
+    run(link, [{ opacity: 0 }, { opacity: 0 }], { duration: at + JUMPS * JUMP, fill: "backwards" });
+  });
+
+  const finish = () => {
+    for (const move of moves) move.cancel();
+    layer.remove();
+    stopBack = () => {};
+  };
+  stopBack = finish;
+  Promise.allSettled(moves.map((move) => move.finished)).then(() => {
+    if (layer.isConnected) finish();
+  });
+}
+
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  document.addEventListener("home:closed", (e) => glitchBack(e.detail));
+  document.addEventListener("fills:pin", (e) => { if (e.detail) stopBack(); });
 }
 
 if (root.dataset.phase) start();
