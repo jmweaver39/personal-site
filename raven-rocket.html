@@ -986,14 +986,20 @@
 
     /* the antennas, by points on them (model space, from the CAD); the
        other parts are anchored at their centres */
-    const DIPOLE = new THREE.Vector3(0.020, -0.006, 1.154);
-    const LORA = new THREE.Vector3(-0.010, -0.020, 1.082);
+    const DIPOLE = new THREE.Vector3(-0.025, -0.013, 1.163);
+    const LORA = new THREE.Vector3(0.014, -0.016, 1.093);
     /* the M9N and its three screws: this export leaves them sunk in the
        plate, 135 degrees round from the three bosses printed for them on
        the mount above it. this turn and lift (model space, m) set the
        holes on the bosses and the board's underside on their tops */
     const GPS_SEAT = new THREE.Matrix4().makeRotationZ(0.75 * Math.PI).setPosition(0.006119, 0.0427, 0.018872);
     const GPS_SCREWS = /^Hex_socket_head_cap_screw_M3x050_x_16_[346]$/;
+    /* this export also has the two antenna modules on each other's mounts.
+       these turns and lifts (model space, m) put the RFD900x and its screw
+       on the three holes in the flat plate, and the tracker in the tube */
+    const RFD_SEAT = new THREE.Matrix4().makeRotationZ(0.5 * Math.PI).setPosition(-0.0307, -0.0336, 0.009);
+    const RFD_SCREW = /^Hex_socket_head_cap_screw_M3x050_x_16_7$/;
+    const TRACKER_SEAT = new THREE.Matrix4().makeRotationZ(Math.PI / 3).setPosition(0.0016, 0.00259, 0.0109);
 
     /* the payload's roll at each stop (rad, mod 2pi), the face it shows:
        the sensors and Orange Pi, the same face again for the antennas,
@@ -1346,13 +1352,16 @@
       /* the payload alone: everything in section 1 that stays after the fade */
       const s1 = gltfs[0].scene, s1Parent = s1.parent;
       s1Parent.remove(s1);
-      const gpsParts = [];
+      const seats = [];
       s1.traverse((o) => {
-        if (o.isMesh && (o.userData.hl === "gps" || GPS_SCREWS.test(o.parent.name))) gpsParts.push(o);
+        if (!o.isMesh) return;
+        if (o.userData.hl === "gps" || GPS_SCREWS.test(o.parent.name)) seats.push([o, GPS_SEAT]);
+        else if (o.userData.hl === "dipole" || RFD_SCREW.test(o.parent.name)) seats.push([o, RFD_SEAT]);
+        else if (o.userData.hl === "tracker") seats.push([o, TRACKER_SEAT]);
       });
-      for (const o of gpsParts) {
+      for (const [o, seat] of seats) {
         s1.attach(o);                       // the screws sit under the CAD's own frames
-        o.applyMatrix4(GPS_SEAT);
+        o.applyMatrix4(seat);
       }
       s1.updateMatrixWorld(true);
       const shellSet = new Set(shellMeshes);
