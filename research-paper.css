@@ -244,6 +244,10 @@
   color: var(--dim);
 }
 
+[data-t="6"] .sec.abstract {
+  margin-top: 0;
+}
+
 [data-t="6"] .hero {
   padding: 24px 0;
   border-bottom: 1px solid var(--line);
