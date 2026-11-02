@@ -1029,7 +1029,8 @@
     /* what each stop calls out. hl is the part's key in the model (it
        anchors the leader at the part's centre and lights the part up), or
        at a fixed point; dx, dy place the label from the part in px (above
-       when dy < 0); more is the card it opens */
+       when dy < 0); also is more parts it lights up, with no leader; more
+       is the card it opens */
     const STOPS = [
       [
         { hl: "opi", dx: 150, dy: -200, t: "Orange Pi 4A", d: "video encoder + compute",
@@ -1064,7 +1065,7 @@
           more: "Rated for high sound pressure levels, so it records the flight's audio without clipping. The panel over this side is lifted away to show it." },
         { hl: ["ovcam", "ovlens"], dx: 80, dy: 140, t: "USB slow-motion camera", d: "OV sensor module",
           more: "An OmniVision-sensor slow-motion camera module, feeding the Orange Pi over USB. The bracket over it is lifted away with the panel." },
-        { hl: ["runcam1", "runcam2"], dx: -60, dy: 130, t: "Upward + downward RunCams", d: "two views of the flight",
+        { hl: ["runcam1", "runcam2"], also: ["runcamboard"], dx: -60, dy: 130, t: "Upward + downward RunCams", d: "two views of the flight",
           more: "Two RunCams: one looks up the airframe, one looks down it." },
       ],
     ];
@@ -1123,7 +1124,8 @@
       el.setAttribute("aria-expanded", "false");
       el.setAttribute("aria-hidden", "true");
       el.tabIndex = -1;
-      const item = { ...c, k, keys, el, legs, hover: false, live: false };
+      const lit = keys.concat(c.also || []);
+      const item = { ...c, k, keys, lit, el, legs, hover: false, live: false };
       item.open = (on) => {
         el.classList.toggle("open", on);
         el.setAttribute("aria-expanded", String(on));
@@ -1161,6 +1163,9 @@
        not the blue board's tree. Its PCB, pads, chip and can are colours
        nothing else in the CAD uses */
     const ADC_BOARD = /^(0\.349020_0\.701961_0\.505882|0\.929412_0\.831373_0\.545098|0\.396078_0\.396078_0\.423529|0\.866667_0\.874510_0\.898039)_/;
+    /* nor has the RunCams' board, and its colours aren't its own: it's the
+       only thing wholly inside this box (model space, m) */
+    const RUNCAM_BOARD = new THREE.Box3(new THREE.Vector3(0.0085, -0.0017, 0.9397), new THREE.Vector3(0.0308, 0.0212, 0.9688));
 
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
@@ -1176,10 +1181,12 @@
         g.scene.traverse((o) => { if (/^Acrylic_Runcam_Cover/.test(o.name)) drop.push(o); });
         drop.forEach((o) => o.removeFromParent());
         /* parts the stops call out carry their key in their material name */
+        g.scene.updateMatrixWorld(true);
         g.scene.traverse((o) => {
           const key = o.isMesh && (o.material.name || "").split("_hl_")[1];
           if (key) o.userData.hl = key;
           else if (o.isMesh && ADC_BOARD.test(o.material.name)) o.userData.hl = "adc";
+          else if (o.isMesh && i === 0 && RUNCAM_BOARD.containsBox(new THREE.Box3().setFromObject(o))) o.userData.hl = "runcamboard";
         });
         restyle(g.scene);
         g.scene.updateMatrixWorld(true);
@@ -1764,7 +1771,7 @@
       let stopK = -1, stopV = 0;
       stopVis.forEach((sv, k) => { if (sv > stopV) { stopV = sv; stopK = k; } });
       const opened = coItems.find((c) => c.hover && c.k === stopK);
-      const solid = new Set((opened ? [opened] : coItems.filter((c) => c.k === stopK)).flatMap((c) => c.keys));
+      const solid = new Set((opened ? [opened] : coItems.filter((c) => c.k === stopK)).flatMap((c) => c.lit));
       const wireOf = (group) => (solid.has(group) ? 0 : stopV);
       for (const group in groupMats) {
         const w = wireOf(group);
