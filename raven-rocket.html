@@ -954,6 +954,9 @@
             m.polygonOffsetFactor = -1;
             m.polygonOffsetUnits = -1;
             m.roughness = 0.6;
+          } else if (m.name.endsWith("_hl_dipole") && spread < 0.07 && mean >= 0.78 && mean < 0.94) {
+            /* the RFD900x's case: the same grey as the acrylic, but solid */
+            set(0.72, 0.72, 0.72, 0.55, 0);
           } else if (spread < 0.07 && mean >= 0.78 && mean < 0.94) {
             /* acrylic cover plates: clear, the grey disc shows through */
             o.material = Array.isArray(o.material)
