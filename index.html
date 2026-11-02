@@ -144,7 +144,6 @@
     .word {
       height: calc(176 * var(--u));
       pointer-events: none;
-      transition: opacity 0.22s ease;
     }
 
     .item {
@@ -193,11 +192,6 @@
       position: absolute;
       opacity: 0;
       pointer-events: none;
-    }
-
-    [data-hover="projects"] .word:not([data-fill="projects"]),
-    [data-hover="research"] .word:not([data-fill="research"]) {
-      opacity: 0.45;
     }
 
     /* The clicked word's contents, clipped at its bottom edge so they look
@@ -671,7 +665,7 @@
     paintBackground();
     requestAnimationFrame(tick);
   </script>
-  <script type="module" src="title-fills.js?v=20261030y"></script>
+  <script type="module" src="title-fills.js?v=20261101a"></script>
   <script type="module" src="opening.js?v=20261031c"></script>
   <script src="glitch.js"></script>
 </body>

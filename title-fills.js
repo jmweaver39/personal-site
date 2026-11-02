@@ -361,8 +361,6 @@ function wake() {
 function set(fill, on) {
   fill.on = on;
   fill.line.classList.toggle("on", on);
-  const lit = fills.find((f) => f.on);
-  body.dataset.hover = lit ? lit.line.dataset.fill : "";
   wake();
 }
 
