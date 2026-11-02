@@ -202,7 +202,7 @@
       top: calc(196 * var(--u));
       width: 100%;
       height: calc(88 * var(--u));
-      overflow: hidden;
+      clip-path: inset(0 -100vw);   /* top and bottom only: a long name runs past the word */
       visibility: hidden;
       transition: visibility 0s linear 0.3s;
     }
@@ -472,7 +472,7 @@
         </button>
         <div class="drawer" id="drawer-research">
           <div class="slide">
-            <a class="item" href="research.html?v=20261101d" data-wipe-link data-wipe="dark">
+            <a class="item" href="research.html?v=20261101e" data-wipe-link data-wipe="dark">
               <span class="sr-only">Wire Airfoil Corona Thruster</span>
               <svg viewBox="0 0 600 88" aria-hidden="true"><text class="ink" x="300" y="58" text-anchor="middle" style="font-size: 40px">Wire Airfoil Corona Thruster</text></svg>
             </a>
