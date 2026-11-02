@@ -444,7 +444,7 @@
 <body>
   <h1 class="sr-only">Jay Weaver</h1>
 
-  <div class="bg" aria-hidden="true"><div></div></div>
+  <div class="bg" aria-hidden="true"><div></div><div></div></div>
 
   <main class="page" data-glitch>
     <div class="stage">
@@ -472,7 +472,7 @@
         </button>
         <div class="drawer" id="drawer-research">
           <div class="slide">
-            <a class="item" href="research.html?v=20261101c" data-wipe-link data-wipe="dark">
+            <a class="item" href="research.html?v=20261101d" data-wipe-link data-wipe="dark">
               <span class="sr-only">Wire Airfoil Corona Thruster</span>
               <svg viewBox="0 0 600 88" aria-hidden="true"><text class="ink" x="300" y="58" text-anchor="middle" style="font-size: 40px">Wire Airfoil Corona Thruster</text></svg>
             </a>
@@ -506,27 +506,29 @@
     }
 
     // Background: Figma's speckle clouds, baked into one strip two screens wide.
-    // It slides across at one slow, steady speed, then back, since the noise
-    // doesn't wrap. Each dither cell is a whole number
+    // It only ever slides right, at one slow, steady speed. The noise doesn't wrap,
+    // so a mirrored copy follows it in, joined edge to edge. Each dither cell is a whole number
     // of screen pixels and the strip only moves by whole screen pixels: scaling
     // or sliding it by less made the speckles flicker in Safari.
-    const bgStrip = document.querySelector(".bg div");
+    const bgStrips = document.querySelectorAll(".bg div");
     const CELLS_W = 2400;
     const CELLS_H = 900;
     const CELL = 2;        // Figma px per dither cell
     const CROSSING = 120000;
-    const BG_START = Math.random() * CROSSING * 2;   // each load starts somewhere new
+    const BG_LOOP = CROSSING * 4;                    // both strips, end to end
+    const BG_START = Math.random() * BG_LOOP;        // each load starts somewhere new
     let bgCell = 1;        // CSS px per dither cell
     let bgLeft = NaN;
 
     function placeBackground(now) {
-      const phase = ((BG_START + (reduce.matches ? 0 : now)) % (CROSSING * 2)) / CROSSING;
-      const p = phase < 1 ? phase : 2 - phase;
+      const phase = ((BG_START + (reduce.matches ? 0 : now)) % BG_LOOP) / BG_LOOP;
       const dpr = devicePixelRatio || 1;
-      const left = Math.round(-(CELLS_W / 2) * bgCell * (1 - p) * dpr) / dpr;
+      const width = CELLS_W * bgCell;
+      const left = Math.round(2 * width * phase * dpr) / dpr;
       if (left !== bgLeft) {
         bgLeft = left;
-        bgStrip.style.transform = `translateX(${left}px)`;
+        bgStrips[0].style.transform = `translateX(${left < width ? left : left - 2 * width}px)`;
+        bgStrips[1].style.transform = `translateX(${left - width}px) scaleX(-1)`;
       }
     }
 
@@ -542,8 +544,10 @@
         Math.ceil((innerWidth * dpr) / (CELLS_W / 2))
       );
       bgCell = cellPx / dpr;
-      bgStrip.style.width = `${CELLS_W * bgCell}px`;
-      bgStrip.style.height = `${CELLS_H * bgCell}px`;
+      for (const strip of bgStrips) {
+        strip.style.width = `${CELLS_W * bgCell}px`;
+        strip.style.height = `${CELLS_H * bgCell}px`;
+      }
       bgLeft = NaN;
     }
 
