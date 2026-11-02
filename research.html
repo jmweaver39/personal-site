@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Research — Jay Weaver</title>
+  <title>Wire-Airfoil Corona Thruster — Jay Weaver</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=League+Gothic&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=League+Gothic&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <link rel="stylesheet" href="research-paper.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -18,10 +18,6 @@
       --dot: rgba(255, 255, 255, 0.08);
       --fg: #ffffff;
 
-      --left: clamp(16px, 3.3vw, 80px);
-      --top: clamp(12px, 3.83vw, 92px);
-      --title-size: clamp(48px, min(15.67vw, 100svh / 4.8), 376px);
-      --squeeze: 0.72;  /* Page titles are drawn narrower than the home nav in Figma */
     }
 
     *,
@@ -43,54 +39,26 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    .page {
-      position: relative;
-      height: 100vh;
-      height: 100svh;
-      overflow: hidden;
-      background-color: var(--bg);
-      background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
-      background-size: 16px 16px;
+
+    .back {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 2;
+      display: block;
+      padding: 8px 12px;
     }
 
-    .title {
-      position: absolute;
-      top: var(--top);
-      left: var(--left);
-      z-index: 1;
-      margin: 0;
-      font-family: "Anton", "Impact", sans-serif;
-      font-weight: 400;
-      font-size: var(--title-size);
-      line-height: 0.93;
-      letter-spacing: -0.02em;
-      color: transparent;
-      -webkit-text-stroke: max(2px, 0.027em) var(--fg);
-      transform: scaleX(var(--squeeze));
-      transform-origin: left top;
-    }
-
-    .title a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    /* Full-width cutout photo, placed as in the Figma frame */
-    .hero {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: auto;
+    .back img {
+      display: block;
+      width: 11px;
+      transform: rotate(-90deg);
+      filter: invert(1);
     }
   </style>
 </head>
 <body data-t="6">
-  <main class="page" data-glitch>
-    <!-- The title doubles as the way back home -->
-    <h1 class="title"><a href="index.html" data-glitch-link aria-label="Research — back to home">Research</a></h1>
-    <img class="hero" src="images/research.webp" alt="Electrode test setup: a needle electrode facing a collector plate" onerror="this.remove()">
-  </main>
+  <a class="back" href="index.html?v=20261101c#home" data-wipe-link data-wipe="dark" aria-label="Back to home"><img src="images/home/icons/arrow-back-group.svg" alt=""></a>
   <article class="paper" id="paper">
 <header class="head">
 <p class="kicker">NCSSM · PH4922 Research in Physics III</p>
@@ -111,6 +79,5 @@
       });
     });
   </script>
-  <script src="glitch.js"></script>
 </body>
 </html>
